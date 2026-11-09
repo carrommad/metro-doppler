@@ -732,19 +732,39 @@ function renderProximityGraphToCanvas() {
   ctx.clip();
   for (const tr of tracks) {
     const color = tr.color || "#38bdf8";
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    tr.pts.forEach((p, i) => (i ? ctx.lineTo(toX(p.t), toY(p.d)) : ctx.moveTo(toX(p.t), toY(p.d))));
-    ctx.stroke();
     const cx = toX(tr.cpa.t), cy = toY(tr.cpa.d);
-    ctx.fillStyle = "#fff";
-    ctx.lineWidth = 1.5;
+
+    // Subtle vertical guideline from minimum distance point to time axis
+    ctx.strokeStyle = "rgba(148, 163, 184, 0.25)";
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
     ctx.beginPath();
-    ctx.moveTo(cx, cy - 5); ctx.lineTo(cx + 5, cy); ctx.lineTo(cx, cy + 5); ctx.lineTo(cx - 5, cy);
-    ctx.closePath();
-    ctx.fill();
+    ctx.moveTo(cx, padTop);
+    ctx.lineTo(cx, padTop + plotH);
     ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Big colored circle showing the Metro line color
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 7, 0, Math.PI * 2);
+    ctx.fill();
+
+    // White core and dark outer border for crisp contrast
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "#ffffff";
+    ctx.stroke();
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(cx, cy, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Text tag next to the circle
+    ctx.font = "bold 11px monospace";
+    ctx.fillStyle = color;
+    ctx.textAlign = "left";
+    const lbl = `${tr.lineName} (${Math.round(tr.cpa.d)}m)`;
+    ctx.fillText(lbl, cx + 11, cy + 4);
   }
   ctx.restore();
 
@@ -2278,6 +2298,39 @@ async function downloadBundleZip() {
   document.body.removeChild(a);
 }
 
+// Adds a minimize/restore (−/+) button to every panel box; state persists in localStorage
+function initPanelMinimizers() {
+  document.querySelectorAll(".resizable-panel").forEach((panel) => {
+    const bar = document.createElement("div");
+    bar.className = "panel-minbar";
+    const title = document.createElement("span");
+    title.className = "panel-minbar-title";
+    title.textContent = panel.dataset.title || panel.id;
+    const btn = document.createElement("button");
+    btn.className = "panel-min-btn";
+    bar.append(title, btn);
+    panel.prepend(bar);
+
+    const key = `md-min-${panel.id}`;
+    const apply = (min) => {
+      panel.classList.toggle("minimized", min);
+      btn.textContent = min ? "+" : "−";
+      btn.title = min ? "Restore box" : "Minimize box";
+      localStorage.setItem(key, min ? "1" : "0");
+      if (!min) {
+        setTimeout(() => {
+          if (panel.id === "panel-map" && mapInstance) mapInstance.invalidateSize();
+          const hc = document.getElementById("hires-canvas");
+          if (SPEC_VIEW.result && hc) renderSpectrogramToCanvas(hc);
+          else renderProximityGraphToCanvas();
+        }, 50);
+      }
+    };
+    btn.addEventListener("click", () => apply(!panel.classList.contains("minimized")));
+    apply(localStorage.getItem(key) === "1");
+  });
+}
+
 async function checkPythonBackend() {
   const badge = document.getElementById("badge-backend");
   try {
@@ -2295,6 +2348,7 @@ async function checkPythonBackend() {
 }
 
 window.addEventListener("DOMContentLoaded", () => {
+  initPanelMinimizers();
   const hiresCanvas = document.getElementById("hires-canvas");
   initSpectrogramInteractions(hiresCanvas);
   initMap();

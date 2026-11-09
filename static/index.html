@@ -7,8 +7,8 @@
   <link rel="icon" type="image/png" sizes="64x64" href="favicon.png?v=3" />
   <link rel="shortcut icon" href="favicon.ico?v=3" />
   <link rel="apple-touch-icon" href="favicon.png?v=3" />
-  <link rel="stylesheet" href="vendor/leaflet.css?v=10" />
-  <link rel="stylesheet" href="style.css?v=10" />
+  <link rel="stylesheet" href="vendor/leaflet.css?v=12" />
+  <link rel="stylesheet" href="style.css?v=12" />
 </head>
 <body>
   <header class="topbar">
@@ -37,7 +37,7 @@
 
   <main class="stacked-workspace">
     <!-- Top Box (~Half Screen, Resizable): Recording Controls + Unified Live High-Res Spectrogram -->
-    <section id="panel-spectrogram" class="card resizable-panel spec-panel">
+    <section id="panel-spectrogram" class="card resizable-panel spec-panel" data-title="Recording &amp; Live Spectrogram">
       <div class="controls-row">
         <div class="btn-group">
           <button id="btn-record" class="btn btn-primary">
@@ -157,7 +157,7 @@
     </section>
 
     <!-- Middle Box (Resizable): High-Resolution 3D Distance & Target Proximity Graph -->
-    <section id="panel-proximity" class="card resizable-panel prox-panel">
+    <section id="panel-proximity" class="card resizable-panel prox-panel" data-title="3D Distance &amp; Target Proximity Graph">
       <div class="card-header">
         <div>
           <h2>3D Distance &amp; Target Proximity Graph <span class="tag">Top Max = Closest to Target + Ground Delay Δτ</span></h2>
@@ -170,7 +170,7 @@
     </section>
 
     <!-- Bottom Box (~Half Screen, Resizable): Leaflet Map + TMB Static GTFS + User GPS -->
-    <section id="panel-map" class="card resizable-panel map-panel">
+    <section id="panel-map" class="card resizable-panel map-panel" data-title="TMB Map &amp; Observation Point">
       <div class="card-header">
         <div>
           <h2>TMB Static GTFS &amp; Observation Point <span class="tag">Click Map to Set Point</span></h2>
@@ -194,9 +194,9 @@
     </section>
   </main>
 
-  <script src="vendor/leaflet.js?v=10"></script>
-  <script src="vendor/jszip.min.js?v=10"></script>
-  <script src="vendor/fft.js?v=10"></script>
-  <script src="app.js?v=10"></script>
+  <script src="vendor/leaflet.js?v=12"></script>
+  <script src="vendor/jszip.min.js?v=12"></script>
+  <script src="vendor/fft.js?v=12"></script>
+  <script src="app.js?v=12"></script>
 </body>
 </html>
