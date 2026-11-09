@@ -163,8 +163,13 @@ body {
 }
 
 .spec-panel {
-  height: 56vh;
-  min-height: 440px;
+  height: 58vh;
+  min-height: 460px;
+}
+
+.prox-panel {
+  height: 36vh;
+  min-height: 280px;
 }
 
 .map-panel {
@@ -457,6 +462,7 @@ body {
 }
 
 #hires-canvas,
+#proximity-canvas,
 #hires-img {
   width: 100%;
   height: 100%;

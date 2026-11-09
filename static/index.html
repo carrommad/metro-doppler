@@ -7,8 +7,8 @@
   <link rel="icon" type="image/png" sizes="64x64" href="favicon.png?v=3" />
   <link rel="shortcut icon" href="favicon.ico?v=3" />
   <link rel="apple-touch-icon" href="favicon.png?v=3" />
-  <link rel="stylesheet" href="vendor/leaflet.css?v=8" />
-  <link rel="stylesheet" href="style.css?v=8" />
+  <link rel="stylesheet" href="vendor/leaflet.css?v=9" />
+  <link rel="stylesheet" href="style.css?v=9" />
 </head>
 <body>
   <header class="topbar">
@@ -156,6 +156,19 @@
       </div>
     </section>
 
+    <!-- Middle Box (Resizable): High-Resolution 3D Distance & Target Proximity Graph -->
+    <section id="panel-proximity" class="card resizable-panel prox-panel">
+      <div class="card-header">
+        <div>
+          <h2>3D Distance &amp; Target Proximity Graph <span class="tag">Top Max = Closest to Target + Ground Delay Δτ</span></h2>
+          <p class="card-meta" id="prox-meta">Synced with Spectrogram time window — curves rise from FAR to the Horizontal Top Max line (◆) at closest approach</p>
+        </div>
+      </div>
+      <div class="canvas-container prox-canvas-wrap">
+        <canvas id="proximity-canvas" width="1280" height="320"></canvas>
+      </div>
+    </section>
+
     <!-- Bottom Box (~Half Screen, Resizable): Leaflet Map + TMB Static GTFS + User GPS -->
     <section id="panel-map" class="card resizable-panel map-panel">
       <div class="card-header">
@@ -181,9 +194,9 @@
     </section>
   </main>
 
-  <script src="vendor/leaflet.js?v=8"></script>
-  <script src="vendor/jszip.min.js?v=8"></script>
-  <script src="vendor/fft.js?v=8"></script>
-  <script src="app.js?v=8"></script>
+  <script src="vendor/leaflet.js?v=9"></script>
+  <script src="vendor/jszip.min.js?v=9"></script>
+  <script src="vendor/fft.js?v=9"></script>
+  <script src="app.js?v=9"></script>
 </body>
 </html>

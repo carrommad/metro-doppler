@@ -434,7 +434,7 @@ const SPEC_VIEW = {
   measureP1: null, // { t, f }
   measureP2: null, // { t, f }
   hoverPt: null,   // { t, f, db, x, y }
-  pad: { left: 68, right: 84, top: 34, bottom: 132 },
+  pad: { left: 68, right: 84, top: 34, bottom: 96 },
 };
 
 function sampleBilinearDb(sxxDb, numFrames, numBins, fFrame, fBin) {
@@ -561,19 +561,17 @@ function renderSpectrogramToCanvas(canvas, result) {
     ctx.stroke();
   }
 
-  // X-axis ticks (drawn along the bottom of the Proximity Graph below the spectrogram)
-  const proxBoxTop = padTop + plotH + 14;
-  const proxBoxH = 82;
-  const timeAxisY = proxBoxTop + proxBoxH;
+  // X-axis ticks (drawn below the 4 Proximity Bars under the spectrogram)
+  const barsBottomY = padTop + plotH + 62;
   ctx.textAlign = "center";
   for (let i = 0; i <= 6; i++) {
     const frac = i / 6;
     const tVal = tMin + frac * (tMax - tMin);
     const xPos = padLeft + frac * plotW;
-    ctx.fillText(`${tVal.toFixed(tMax - tMin < 2 ? 3 : 2)}s`, xPos, timeAxisY + 15);
+    ctx.fillText(`${tVal.toFixed(tMax - tMin < 2 ? 3 : 2)}s`, xPos, barsBottomY + 16);
     ctx.beginPath();
-    ctx.moveTo(xPos, timeAxisY);
-    ctx.lineTo(xPos, timeAxisY + 4);
+    ctx.moveTo(xPos, barsBottomY);
+    ctx.lineTo(xPos, barsBottomY + 4);
     ctx.strokeStyle = "#475569";
     ctx.stroke();
   }
@@ -597,76 +595,15 @@ function renderSpectrogramToCanvas(canvas, result) {
 
   drawExpectedMetroOverlay(ctx, padLeft, padTop, plotW, plotH);
   drawMeasureOverlay(ctx, padLeft, padTop, plotW, plotH);
+  renderProximityGraphToCanvas();
 }
 
 /**
- * Draws a dedicated Proximity vs. Time Graph directly BELOW the spectrogram
- * (sharing the exact same horizontal time axis tMin..tMax).
- * - Horizontal Top Max dashed line = CLOSEST TO TARGET (100% proximity peak for all lines)
- * - Bottom baseline = FAR
- * - 3-4 colored curves (one per closest TMB Metro line) rising from FAR -> touching the
- *   Horizontal Top Max line at ground-delayed Closest Point of Approach (◆ marker) -> falling back to FAR.
+ * Draws the 4 horizontal Metro Line Proximity Time Bars directly BELOW the spectrogram
+ * (ramping from FAR -> CLOSEST ◆ -> FAR along the shared time axis).
  */
 function drawExpectedMetroOverlay(ctx, padLeft, padTop, plotW, plotH) {
-  const { tMin, tMax } = SPEC_VIEW;
-  const cGround = Math.max(200, parseFloat(document.getElementById("input-c-ground")?.value) || 1500);
-  const toX = (t) => padLeft + ((t - tMin) / Math.max(1e-6, tMax - tMin)) * plotW;
-
-  const boxTop = padTop + plotH + 14;
-  const boxH = 82;
-  const boxBottom = boxTop + boxH;
-  const yMaxTop = boxTop + 15;       // Horizontal Top Max line ("CLOSEST TO TARGET")
-  const yFarBottom = boxBottom - 7;  // Bottom baseline ("FAR")
-  const graphH = yFarBottom - yMaxTop;
-
-  ctx.save();
-
-  // Proximity Graph background & border (always drawn below spectrogram)
-  ctx.fillStyle = "#070b12";
-  ctx.fillRect(padLeft, boxTop, plotW, boxH);
-  ctx.strokeStyle = "#1e293b";
-  ctx.lineWidth = 1;
-  ctx.strokeRect(padLeft, boxTop, plotW, boxH);
-
-  // Y-axis labels on the left of the Proximity Graph
-  ctx.font = "700 9.5px monospace";
-  ctx.textAlign = "right";
-  ctx.fillStyle = "#facc15";
-  ctx.fillText("CLOSEST", padLeft - 6, yMaxTop + 3);
-  ctx.fillStyle = "#64748b";
-  ctx.fillText("FAR", padLeft - 6, yFarBottom);
-
-  // Horizontal Top Max reference line (all lines peak here when closest to selected target)
-  ctx.strokeStyle = "rgba(250, 204, 21, 0.85)";
-  ctx.lineWidth = 1.4;
-  ctx.setLineDash([5, 4]);
-  ctx.beginPath();
-  ctx.moveTo(padLeft, yMaxTop);
-  ctx.lineTo(padLeft + plotW, yMaxTop);
-  ctx.stroke();
-
-  // Mid-level 50% grid line
-  ctx.strokeStyle = "rgba(71, 85, 105, 0.35)";
-  ctx.lineWidth = 1;
-  ctx.setLineDash([2, 4]);
-  ctx.beginPath();
-  ctx.moveTo(padLeft, yMaxTop + graphH * 0.5);
-  ctx.lineTo(padLeft + plotW, yMaxTop + graphH * 0.5);
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  // Title label on top-left inside Proximity box
-  ctx.font = "600 10px Inter, sans-serif";
-  ctx.fillStyle = "#fef08a";
-  ctx.textAlign = "left";
-  ctx.fillText("🎯 TARGET PROXIMITY TIMELINE (Top Dashed Line = Closest to Target + Ground Delay Δτ)", padLeft + 6, boxTop + 10.5);
-
-  if (!APP_STATE.showExpectedOverlay) {
-    ctx.restore();
-    return;
-  }
-
-  // Ensure tracks exist during live recording and after stopping
+  if (!APP_STATE.showExpectedOverlay) return;
   const totalDur = SPEC_VIEW.result ? SPEC_VIEW.result.duration_sec : 6.0;
   let tracks = Object.values(APP_STATE.expectedTrainTracks || {})
     .filter((t) => t && t.samples && t.samples.length >= 2)
@@ -677,25 +614,227 @@ function drawExpectedMetroOverlay(ctx, padLeft, padTop, plotW, plotH) {
       .filter((t) => t && t.samples && t.samples.length >= 2)
       .slice(0, 4);
   }
-  if (tracks.length === 0) {
-    ctx.restore();
-    return;
-  }
+  if (tracks.length === 0) return;
 
-  // Clip curves inside the Proximity Graph box
+  const { tMin, tMax } = SPEC_VIEW;
+  const cGround = Math.max(200, parseFloat(document.getElementById("input-c-ground")?.value) || 1500);
+  const toX = (t) => padLeft + ((t - tMin) / Math.max(1e-6, tMax - tMin)) * plotW;
+
+  const stripTop = padTop + plotH + 6;
+  const laneH = 14;
+
+  ctx.save();
+  for (let idx = 0; idx < tracks.length; idx++) {
+    const tr = tracks[idx];
+    const samples = tr.samples;
+    if (!samples || samples.length < 2) continue;
+
+    const laneY = stripTop + idx * laneH + laneH * 0.5;
+    const color = tr.color || "#38bdf8";
+
+    ctx.font = "700 10px monospace";
+    ctx.fillStyle = color;
+    ctx.textAlign = "right";
+    ctx.fillText(`${tr.lineName}#${tr.srvId}`, padLeft - 6, laneY + 3.5);
+
+    ctx.fillStyle = "rgba(30, 41, 59, 0.65)";
+    ctx.fillRect(padLeft, laneY - 4.5, plotW, 9);
+
+    let minD = Infinity;
+    let maxD = 0;
+    const pts = [];
+    for (let i = 0; i < samples.length; i++) {
+      const s = samples[i];
+      const delaySec = s.distM / cGround;
+      const tArrival = s.tEmit + delaySec;
+      const x = toX(tArrival);
+      if (s.distM < minD) minD = s.distM;
+      if (s.distM > maxD) maxD = s.distM;
+      pts.push({ x, tArrival, distM: s.distM, delaySec });
+    }
+
+    let cpaPt = pts[Math.floor(pts.length / 2)];
+    for (const p of pts) {
+      if (p.distM <= cpaPt.distM) cpaPt = p;
+    }
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(padLeft, laneY - 7, plotW, 14);
+    ctx.clip();
+
+    const dSpan = Math.max(1.0, maxD - minD);
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[i];
+      const p1 = pts[i + 1];
+      const x0 = Math.min(p0.x, p1.x);
+      const segW = Math.max(1.5, Math.abs(p1.x - p0.x) + 0.8);
+      if (x0 + segW < padLeft || x0 > padLeft + plotW) continue;
+
+      const avgD = 0.5 * (p0.distM + p1.distM);
+      let relProx = 1.0 - Math.min(1.0, (avgD - minD) / dSpan);
+      if (maxD - minD < 2.0 && pts.length > 2) {
+        const u = (i / (pts.length - 1)) * 2.0 - 1.0;
+        relProx = Math.max(0.0, 1.0 - u * u);
+      }
+      const intensity = 0.25 + 0.75 * relProx;
+      const barH = 2.0 + 7.5 * relProx;
+
+      ctx.globalAlpha = Math.min(1.0, intensity);
+      ctx.fillStyle = color;
+      ctx.fillRect(x0, laneY - barH * 0.5, segW, barH);
+    }
+
+    ctx.globalAlpha = 1.0;
+    if (cpaPt && cpaPt.x >= padLeft && cpaPt.x <= padLeft + plotW) {
+      ctx.fillStyle = "#ffffff";
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cpaPt.x, laneY - 5);
+      ctx.lineTo(cpaPt.x + 5, laneY);
+      ctx.lineTo(cpaPt.x, laneY + 5);
+      ctx.lineTo(cpaPt.x - 5, laneY);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      const tag = `min ${Math.round(cpaPt.distM)}m (Δτ=${(cpaPt.delaySec * 1000).toFixed(0)}ms)`;
+      ctx.font = "600 9.5px monospace";
+      const tw = ctx.measureText(tag).width;
+      const tx = cpaPt.x + 8 + tw < padLeft + plotW - 4 ? cpaPt.x + 8 : cpaPt.x - tw - 8;
+      ctx.fillStyle = "rgba(9, 13, 22, 0.88)";
+      ctx.fillRect(tx - 2, laneY - 5.5, tw + 4, 11);
+      ctx.fillStyle = "#f8fafc";
+      ctx.textAlign = "left";
+      ctx.fillText(tag, tx, laneY + 3);
+    }
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+/**
+ * Renders the dedicated high-resolution 3D Distance & Target Proximity Graph in #proximity-canvas
+ * (Middle box between the Spectrogram box and the Map box).
+ * - Top Horizontal Max dashed line = CLOSEST TO TARGET (100% proximity peak for all lines)
+ * - Bottom baseline = FAR
+ */
+function renderProximityGraphToCanvas() {
+  const canvas = document.getElementById("proximity-canvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width;
+  const H = canvas.height;
+
+  ctx.fillStyle = "#0b0f17";
+  ctx.fillRect(0, 0, W, H);
+
+  const padLeft = 68;
+  const padRight = 84;
+  const padTop = 36;
+  const padBottom = 38;
+  const plotW = W - padLeft - padRight;
+  const plotH = H - padTop - padBottom;
+
+  const totalDur = SPEC_VIEW.result ? SPEC_VIEW.result.duration_sec : 6.0;
+  const tMin = SPEC_VIEW.result ? SPEC_VIEW.tMin : 0;
+  const tMax = SPEC_VIEW.result ? SPEC_VIEW.tMax : totalDur;
+  const cGround = Math.max(200, parseFloat(document.getElementById("input-c-ground")?.value) || 1500);
+  const toX = (t) => padLeft + ((t - tMin) / Math.max(1e-6, tMax - tMin)) * plotW;
+
+  // Plot background & border
+  ctx.fillStyle = "#070b12";
+  ctx.fillRect(padLeft, padTop, plotW, plotH);
+  ctx.strokeStyle = "#1e293b";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(padLeft, padTop, plotW, plotH);
+
+  const yMaxTop = padTop + 18;
+  const yFarBottom = padTop + plotH - 12;
+  const graphH = yFarBottom - yMaxTop;
+
+  // Title
+  ctx.fillStyle = "#e2e8f0";
+  ctx.font = "600 12.5px Inter, sans-serif";
+  ctx.textAlign = "left";
+  ctx.fillText(
+    `Target Proximity & 3D Ground-Delayed Arrival (c_ground=${cGround} m/s | Top Max Line = Closest to Target)`,
+    padLeft,
+    21
+  );
+
+  // Horizontal Top Max reference line ("CLOSEST TO TARGET")
+  ctx.strokeStyle = "rgba(250, 204, 21, 0.9)";
+  ctx.lineWidth = 1.6;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath();
+  ctx.moveTo(padLeft, yMaxTop);
+  ctx.lineTo(padLeft + plotW, yMaxTop);
+  ctx.stroke();
+
+  // Horizontal grid lines (75%, 50%, 25%, FAR)
+  ctx.strokeStyle = "rgba(71, 85, 105, 0.3)";
+  ctx.lineWidth = 1;
+  ctx.setLineDash([2, 4]);
+  for (const frac of [0.25, 0.5, 0.75, 1.0]) {
+    const gy = yMaxTop + frac * graphH;
+    ctx.beginPath();
+    ctx.moveTo(padLeft, gy);
+    ctx.lineTo(padLeft + plotW, gy);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  // Y-axis labels
+  ctx.font = "700 10.5px monospace";
+  ctx.textAlign = "right";
+  ctx.fillStyle = "#facc15";
+  ctx.fillText("CLOSEST", padLeft - 8, yMaxTop + 4);
+  ctx.fillStyle = "#94a3b8";
+  ctx.fillText("50%", padLeft - 8, yMaxTop + graphH * 0.5 + 4);
+  ctx.fillStyle = "#64748b";
+  ctx.fillText("FAR", padLeft - 8, yFarBottom + 4);
+
+  // X-axis ticks
+  ctx.fillStyle = "#94a3b8";
+  ctx.font = "11px monospace";
+  ctx.textAlign = "center";
+  for (let i = 0; i <= 6; i++) {
+    const frac = i / 6;
+    const tVal = tMin + frac * (tMax - tMin);
+    const xPos = padLeft + frac * plotW;
+    ctx.fillText(`${tVal.toFixed(tMax - tMin < 2 ? 3 : 2)}s`, xPos, padTop + plotH + 16);
+    ctx.beginPath();
+    ctx.moveTo(xPos, padTop + plotH);
+    ctx.lineTo(xPos, padTop + plotH + 4);
+    ctx.strokeStyle = "#475569";
+    ctx.stroke();
+  }
+  ctx.fillText("Ground-Delayed Arrival Time t_obs = t_emit + D_3D / c_ground (s)", padLeft + plotW / 2, H - 5);
+
+  let tracks = Object.values(APP_STATE.expectedTrainTracks || {})
+    .filter((t) => t && t.samples && t.samples.length >= 2)
+    .slice(0, 4);
+  if (tracks.length === 0) {
+    refreshStaticExpectedTracksFromPoint(totalDur);
+    tracks = Object.values(APP_STATE.expectedTrainTracks || {})
+      .filter((t) => t && t.samples && t.samples.length >= 2)
+      .slice(0, 4);
+  }
+  if (tracks.length === 0) return;
+
   ctx.save();
   ctx.beginPath();
-  ctx.rect(padLeft, boxTop, plotW, boxH);
+  ctx.rect(padLeft, padTop, plotW, plotH);
   ctx.clip();
 
   for (let idx = 0; idx < tracks.length; idx++) {
     const tr = tracks[idx];
     const samples = tr.samples;
     if (!samples || samples.length < 2) continue;
-
     const color = tr.color || "#38bdf8";
 
-    // Compute ground-delayed arrival times & min/max 3D distance for this train
     let minD = Infinity;
     let maxD = 0;
     const rawPts = [];
@@ -709,15 +848,12 @@ function drawExpectedMetroOverlay(ctx, padLeft, padTop, plotW, plotH) {
       rawPts.push({ x, tArrival, distM: s.distM, delaySec });
     }
 
-    // Normalize each train's curve so its Closest Point of Approach (minD) touches the Horizontal Top Max line (yMaxTop)
-    // and its farthest point sits at yFarBottom ("FAR")
     const dSpan = Math.max(0.5, maxD - minD);
     let cpaPt = null;
     const curvePts = [];
     for (let i = 0; i < rawPts.length; i++) {
       const p = rawPts[i];
       let normProx = 1.0 - (p.distM - minD) / dSpan;
-      // If recorded distance variation was very small (< 2m), shape a clean FAR -> CLOSEST -> FAR arch across the window
       if (maxD - minD < 2.0 && rawPts.length > 2) {
         const u = (i / (rawPts.length - 1)) * 2.0 - 1.0;
         normProx = Math.max(0.0, 1.0 - u * u);
@@ -730,7 +866,7 @@ function drawExpectedMetroOverlay(ctx, padLeft, padTop, plotW, plotH) {
       if (!cpaPt || pt.shaped >= cpaPt.shaped) cpaPt = pt;
     }
 
-    // Subtle shaded area under the curve
+    // Area fill under curve
     ctx.beginPath();
     ctx.moveTo(curvePts[0].x, yFarBottom);
     for (const p of curvePts) ctx.lineTo(p.x, p.y);
@@ -740,10 +876,10 @@ function drawExpectedMetroOverlay(ctx, padLeft, padTop, plotW, plotH) {
     ctx.globalAlpha = 0.14;
     ctx.fill();
 
-    // Colored Metro line curve: FAR -> Horizontal Top Max (CLOSEST) -> FAR
+    // Smooth curve stroke
     ctx.globalAlpha = 0.95;
     ctx.strokeStyle = color;
-    ctx.lineWidth = 2.4;
+    ctx.lineWidth = 2.6;
     ctx.beginPath();
     for (let i = 0; i < curvePts.length; i++) {
       if (i === 0) ctx.moveTo(curvePts[i].x, curvePts[i].y);
@@ -751,50 +887,36 @@ function drawExpectedMetroOverlay(ctx, padLeft, padTop, plotW, plotH) {
     }
     ctx.stroke();
 
-    // Peak ◆ marker right on the Horizontal Top Max line where this train is closest to target
+    // Peak ◆ marker on the Horizontal Top Max line
     if (cpaPt && cpaPt.x >= padLeft && cpaPt.x <= padLeft + plotW) {
       ctx.globalAlpha = 1.0;
-
-      // Vertical alignment tick up to the bottom border of the spectrogram
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 1.2;
-      ctx.setLineDash([3, 3]);
-      ctx.beginPath();
-      ctx.moveTo(cpaPt.x, boxTop);
-      ctx.lineTo(cpaPt.x, cpaPt.y);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      // Diamond ◆ marker at the Horizontal Top Max peak
       ctx.fillStyle = "#ffffff";
       ctx.strokeStyle = color;
-      ctx.lineWidth = 2.2;
+      ctx.lineWidth = 2.4;
       ctx.beginPath();
-      ctx.moveTo(cpaPt.x, cpaPt.y - 5.5);
-      ctx.lineTo(cpaPt.x + 5.5, cpaPt.y);
-      ctx.lineTo(cpaPt.x, cpaPt.y + 5.5);
-      ctx.lineTo(cpaPt.x - 5.5, cpaPt.y);
+      ctx.moveTo(cpaPt.x, cpaPt.y - 6.5);
+      ctx.lineTo(cpaPt.x + 6.5, cpaPt.y);
+      ctx.lineTo(cpaPt.x, cpaPt.y + 6.5);
+      ctx.lineTo(cpaPt.x - 6.5, cpaPt.y);
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
 
-      // Badge label for this train's closest approach
-      const lbl = `${tr.lineName}#${tr.srvId} (${Math.round(cpaPt.distM)}m, Δτ=${(cpaPt.delaySec * 1000).toFixed(0)}ms)`;
-      ctx.font = "700 9.5px monospace";
-      const tw = ctx.measureText(lbl).width + 8;
-      const lx = Math.max(padLeft + 4, Math.min(padLeft + plotW - tw - 4, cpaPt.x - tw * 0.5));
-      const ly = cpaPt.y + 14 + (idx % 2) * 13;
-      ctx.fillStyle = "rgba(9, 13, 22, 0.9)";
-      ctx.fillRect(lx, ly - 9, tw, 12);
+      const lbl = `🚇 ${tr.lineName}#${tr.srvId} • min 3D: ${Math.round(cpaPt.distM)}m (Δτ=${(cpaPt.delaySec * 1000).toFixed(0)}ms)`;
+      ctx.font = "700 10.5px monospace";
+      const tw = ctx.measureText(lbl).width + 10;
+      const lx = Math.max(padLeft + 6, Math.min(padLeft + plotW - tw - 6, cpaPt.x - tw * 0.5));
+      const ly = cpaPt.y + 18 + (idx % 2) * 18;
+      ctx.fillStyle = "rgba(9, 13, 22, 0.92)";
+      ctx.fillRect(lx, ly - 11, tw, 15);
       ctx.strokeStyle = color;
-      ctx.lineWidth = 1;
-      ctx.strokeRect(lx, ly - 9, tw, 12);
+      ctx.lineWidth = 1.2;
+      ctx.strokeRect(lx, ly - 11, tw, 15);
       ctx.fillStyle = "#f8fafc";
       ctx.textAlign = "left";
-      ctx.fillText(lbl, lx + 4, ly);
+      ctx.fillText(lbl, lx + 5, ly);
     }
   }
-  ctx.restore();
   ctx.restore();
 }
 
@@ -1102,9 +1224,13 @@ function setObservationPoint(lat, lon, source = "map-click") {
   updateNearestStation(lat, lon);
   lastRadarUpdatePerf = 0;
   updateClosestTrainsRadar(performance.now());
-  if (!APP_STATE.isRecording && SPEC_VIEW.result) {
+  if (!APP_STATE.isRecording) {
     refreshStaticExpectedTracksFromPoint();
-    renderSpectrogramToCanvas(document.getElementById("hires-canvas"));
+    if (SPEC_VIEW.result) {
+      renderSpectrogramToCanvas(document.getElementById("hires-canvas"));
+    } else {
+      renderProximityGraphToCanvas();
+    }
   }
 }
 
@@ -1512,7 +1638,11 @@ function updateClosestTrainsRadar(now) {
     }
     if (SPEC_VIEW.result) {
       renderSpectrogramToCanvas(document.getElementById("hires-canvas"));
+    } else {
+      renderProximityGraphToCanvas();
     }
+  } else if (!SPEC_VIEW.result) {
+    renderProximityGraphToCanvas();
   }
 }
 
@@ -2334,16 +2464,20 @@ window.addEventListener("DOMContentLoaded", () => {
   initMap();
   checkPythonBackend();
 
-  // Keep Leaflet map and Spectrogram crisp whenever the user drag-resizes either panel
+  // Keep Leaflet map, Proximity Graph, and Spectrogram crisp whenever the user drag-resizes any panel
+  renderProximityGraphToCanvas();
   if (window.ResizeObserver) {
     const mapPanel = document.getElementById("panel-map");
     const specPanel = document.getElementById("panel-spectrogram");
+    const proxPanel = document.getElementById("panel-proximity");
     const ro = new ResizeObserver(() => {
       if (mapInstance) mapInstance.invalidateSize();
       if (SPEC_VIEW.result) renderSpectrogramToCanvas(hiresCanvas);
+      renderProximityGraphToCanvas();
     });
     if (mapPanel) ro.observe(mapPanel);
     if (specPanel) ro.observe(specPanel);
+    if (proxPanel) ro.observe(proxPanel);
   }
 
   document.getElementById("btn-record").addEventListener("click", () => {
