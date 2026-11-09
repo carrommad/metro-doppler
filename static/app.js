@@ -1008,6 +1008,34 @@ function haversineMeters(lat1, lon1, lat2, lon2) {
   return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+// Inverse-distance-weighted BCN Orography & Metro Tunnel Depth model (ICGC DEM + TMB station depths)
+function estimateBcnOrographyAndDepth(lat, lon, lineName = null) {
+  const DEFAULT_LINE_DEPTH = {
+    L1: 13, L2: 18, L3: 22, L4: 15, L5: 28, L9N: 48, L9S: 44, L10N: 45, L10S: 42, L11: 32,
+  };
+  let sumW = 0, sumElev = 0, sumDepth = 0;
+  for (const feat of APP_STATE.gtfsFeatures) {
+    if (feat.geometry && feat.geometry.type === "Point" && feat.properties) {
+      const p = feat.properties;
+      if (p.surface_elev_m === undefined) continue;
+      if (lineName && Array.isArray(p.lines) && !p.lines.includes(lineName)) continue;
+      const [sLon, sLat] = feat.geometry.coordinates;
+      const d = Math.max(25.0, haversineMeters(lat, lon, sLat, sLon));
+      const w = 1.0 / (d * d);
+      sumW += w;
+      sumElev += w * p.surface_elev_m;
+      sumDepth += w * (p.depth_m || 18);
+    }
+  }
+  const surfaceElevM = sumW > 0 ? sumElev / sumW : 25.0;
+  const tunnelDepthM = sumW > 0 ? sumDepth / sumW : (DEFAULT_LINE_DEPTH[lineName] || 18.0);
+  return {
+    surfaceElevM: Number(surfaceElevM.toFixed(1)),
+    tunnelDepthM: Number(tunnelDepthM.toFixed(1)),
+    railElevM: Number((surfaceElevM - tunnelDepthM).toFixed(1)),
+  };
+}
+
 function initMap() {
   mapInstance = window.L.map("map", {
     center: [41.395, 2.172],
@@ -1080,8 +1108,12 @@ function renderGTFSGeoJSON(geojson) {
         );
       } else if (p.feature_type === "stop" || p.stop_name) {
         const lines = Array.isArray(p.lines) ? p.lines.join(", ") : p.lines || "";
+        const zInfo =
+          p.surface_elev_m !== undefined
+            ? `<br/>Orography Z_surf: <b>${p.surface_elev_m} m ASL</b> | Tunnel Depth: <b>-${p.depth_m} m</b>`
+            : "";
         layer.bindPopup(
-          `<strong>Station: ${p.stop_name}</strong><br/>Stop ID: ${p.stop_id || "—"}<br/>Lines: ${lines}`
+          `<strong>Station: ${p.stop_name}</strong><br/>Stop ID: ${p.stop_id || "—"}<br/>Lines: ${lines}${zInfo}`
         );
       }
     },
@@ -1271,13 +1303,18 @@ function updateClosestTrainsRadar(now) {
   const cGround = Math.max(200, parseFloat(document.getElementById("input-c-ground")?.value) || 1500);
   const f0Base = Math.max(40, parseFloat(document.getElementById("input-f0-train")?.value) || 440);
   const cosLat = Math.cos((obs.lat * Math.PI) / 180.0);
+  const obsOro = estimateBcnOrographyAndDepth(obs.lat, obs.lon, null);
+  obs.surface_elev_m = obsOro.surfaceElevM;
 
   const ranked = [];
   for (const tr of trainFleet) {
     if (tr.lat === undefined || tr.lon === undefined) continue;
-    const distM = haversineMeters(obs.lat, obs.lon, tr.lat, tr.lon);
+    const horizDistM = haversineMeters(obs.lat, obs.lon, tr.lat, tr.lon);
+    const trOro = estimateBcnOrographyAndDepth(tr.lat, tr.lon, tr.lineName);
+    const dzM = obsOro.surfaceElevM - trOro.railElevM;
+    const distM = Math.hypot(horizDistM, dzM);
 
-    // Compute unit tangent along track and radial velocity v_r = v_train · r_hat (positive = receding, negative = approaching)
+    // Compute unit tangent along track and 3D radial velocity v_r = v_train · r_hat_3D
     const idx = tr.segIdx || 0;
     const dxTrack = (tr.coords[idx + 1][0] - tr.coords[idx][0]) * cosLat * 111320 * tr.dir;
     const dyTrack = (tr.coords[idx + 1][1] - tr.coords[idx][1]) * 110540 * tr.dir;
@@ -1287,8 +1324,8 @@ function updateClosestTrainsRadar(now) {
 
     const rx = (tr.lon - obs.lon) * cosLat * 111320;
     const ry = (tr.lat - obs.lat) * 110540;
-    const rNorm = Math.max(1.0, Math.hypot(rx, ry));
-    const vRadialMps = (vx * rx + vy * ry) / rNorm;
+    const rNorm3D = Math.max(1.0, distM);
+    const vRadialMps = (vx * rx + vy * ry) / rNorm3D;
     const groundDelaySec = distM / cGround;
     const fExpectedHz = f0Base / (1.0 + vRadialMps / cGround);
 
@@ -1298,6 +1335,9 @@ function updateClosestTrainsRadar(now) {
       color: tr.color,
       lat: tr.lat,
       lon: tr.lon,
+      horizDistM,
+      tunnelDepthM: trOro.tunnelDepthM,
+      railElevM: trOro.railElevM,
       distM,
       vRadialMps,
       groundDelaySec,
@@ -1335,7 +1375,7 @@ function updateClosestTrainsRadar(now) {
       .map(
         (c) =>
           `<span style="color:${c.color};font-weight:700">${c.lineName}#${c.srvId}</span> ` +
-          `${Math.round(c.distM)}m (Δτ=${(c.groundDelaySec * 1000).toFixed(0)}ms, f≈${c.fExpectedHz.toFixed(0)}Hz)`
+          `3D:${Math.round(c.distM)}m (depth:${Math.round(c.tunnelDepthM)}m, Δτ=${(c.groundDelaySec * 1000).toFixed(0)}ms, f≈${c.fExpectedHz.toFixed(0)}Hz)`
       )
       .join(" · ");
   }
@@ -1375,6 +1415,8 @@ function updateNearestStation(lat, lon) {
           stop_id: feat.properties.stop_id,
           stop_name: feat.properties.stop_name,
           lines: feat.properties.lines || [],
+          surface_elev_m: feat.properties.surface_elev_m ?? 25,
+          depth_m: feat.properties.depth_m ?? 18,
           distance_m: Math.round(d),
           coordinates: [sLon, sLat],
         };
@@ -1384,8 +1426,14 @@ function updateNearestStation(lat, lon) {
   APP_STATE.nearestStation = best;
   const stEl = document.getElementById("nearest-station");
   const lnEl = document.getElementById("nearest-lines");
+  const coordsEl = document.getElementById("gps-coords");
+  const obsOro = estimateBcnOrographyAndDepth(lat, lon, null);
+  if (coordsEl) {
+    coordsEl.textContent =
+      `${lat.toFixed(5)}, ${lon.toFixed(5)} (Z_surf≈${obsOro.surfaceElevM}m ASL)`;
+  }
   if (best) {
-    stEl.textContent = `${best.stop_name} (${best.distance_m} m)`;
+    stEl.textContent = `${best.stop_name} (${best.distance_m}m horiz, depth≈${best.depth_m}m)`;
     lnEl.textContent = Array.isArray(best.lines) ? best.lines.join(", ") : String(best.lines);
   } else {
     stEl.textContent = "—";

@@ -163,13 +163,13 @@ body {
 }
 
 .spec-panel {
-  height: 47vh;
-  min-height: 320px;
+  height: 56vh;
+  min-height: 440px;
 }
 
 .map-panel {
-  height: 43vh;
-  min-height: 260px;
+  height: 72vh;
+  min-height: 560px;
 }
 
 .card-header {
@@ -479,7 +479,7 @@ body {
 .map-container {
   width: 100%;
   flex: 1;
-  min-height: 160px;
+  min-height: 440px;
   border-radius: 6px;
   border: 1px solid #1e293b;
   background: #090d16;

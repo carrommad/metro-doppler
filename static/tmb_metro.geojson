@@ -190,103 +190,113 @@
     },
     {
       "type": "Feature",
-      "properties": { "feature_type": "stop", "stop_id": "125", "stop_name": "Catalunya", "lines": ["L1", "L3"] },
+      "properties": { "feature_type": "stop", "stop_id": "125", "stop_name": "Catalunya", "lines": ["L1", "L3"], "surface_elev_m": 19, "depth_m": 12 },
       "geometry": { "type": "Point", "coordinates": [2.1700, 41.3870] }
     },
     {
       "type": "Feature",
-      "properties": { "feature_type": "stop", "stop_id": "124", "stop_name": "Universitat", "lines": ["L1", "L2"] },
+      "properties": { "feature_type": "stop", "stop_id": "124", "stop_name": "Universitat", "lines": ["L1", "L2"], "surface_elev_m": 25, "depth_m": 16 },
       "geometry": { "type": "Point", "coordinates": [2.1642, 41.3855] }
     },
     {
       "type": "Feature",
-      "properties": { "feature_type": "stop", "stop_id": "121", "stop_name": "Espanya", "lines": ["L1", "L3"] },
+      "properties": { "feature_type": "stop", "stop_id": "121", "stop_name": "Espanya", "lines": ["L1", "L3"], "surface_elev_m": 31, "depth_m": 14 },
       "geometry": { "type": "Point", "coordinates": [2.1492, 41.3751] }
     },
     {
       "type": "Feature",
-      "properties": { "feature_type": "stop", "stop_id": "319", "stop_name": "Sants Estació", "lines": ["L3", "L5"] },
+      "properties": { "feature_type": "stop", "stop_id": "319", "stop_name": "Sants Estació", "lines": ["L3", "L5"], "surface_elev_m": 32, "depth_m": 18 },
       "geometry": { "type": "Point", "coordinates": [2.1402, 41.3791] }
     },
     {
       "type": "Feature",
-      "properties": { "feature_type": "stop", "stop_id": "324", "stop_name": "Passeig de Gràcia", "lines": ["L2", "L3", "L4"] },
+      "properties": { "feature_type": "stop", "stop_id": "324", "stop_name": "Passeig de Gràcia", "lines": ["L2", "L3", "L4"], "surface_elev_m": 28, "depth_m": 19 },
       "geometry": { "type": "Point", "coordinates": [2.1674, 41.3917] }
     },
     {
       "type": "Feature",
-      "properties": { "feature_type": "stop", "stop_id": "325", "stop_name": "Diagonal", "lines": ["L3", "L5"] },
+      "properties": { "feature_type": "stop", "stop_id": "325", "stop_name": "Diagonal", "lines": ["L3", "L5"], "surface_elev_m": 46, "depth_m": 22 },
       "geometry": { "type": "Point", "coordinates": [2.1587, 41.3976] }
     },
     {
       "type": "Feature",
-      "properties": { "feature_type": "stop", "stop_id": "221", "stop_name": "Sagrada Família", "lines": ["L2", "L5"] },
+      "properties": { "feature_type": "stop", "stop_id": "221", "stop_name": "Sagrada Família", "lines": ["L2", "L5"], "surface_elev_m": 39, "depth_m": 24 },
       "geometry": { "type": "Point", "coordinates": [2.1744, 41.4036] }
     },
     {
       "type": "Feature",
-      "properties": { "feature_type": "stop", "stop_id": "128", "stop_name": "Glòries", "lines": ["L1"] },
+      "properties": { "feature_type": "stop", "stop_id": "128", "stop_name": "Glòries", "lines": ["L1"], "surface_elev_m": 15, "depth_m": 10 },
       "geometry": { "type": "Point", "coordinates": [2.1870, 41.4063] }
     },
     {
       "type": "Feature",
-      "properties": { "feature_type": "stop", "stop_id": "131", "stop_name": "La Sagrera", "lines": ["L1", "L5", "L9N", "L10N"] },
+      "properties": { "feature_type": "stop", "stop_id": "131", "stop_name": "La Sagrera", "lines": ["L1", "L5", "L9N", "L10N"], "surface_elev_m": 26, "depth_m": 36 },
       "geometry": { "type": "Point", "coordinates": [2.1870, 41.4225] }
     },
     {
       "type": "Feature",
-      "properties": { "feature_type": "stop", "stop_id": "126", "stop_name": "Urquinaona", "lines": ["L1", "L4"] },
+      "properties": { "feature_type": "stop", "stop_id": "126", "stop_name": "Urquinaona", "lines": ["L1", "L4"], "surface_elev_m": 21, "depth_m": 14 },
       "geometry": { "type": "Point", "coordinates": [2.1746, 41.3891] }
     },
     {
       "type": "Feature",
-      "properties": { "feature_type": "stop", "stop_id": "215", "stop_name": "Paral·lel", "lines": ["L2", "L3"] },
+      "properties": { "feature_type": "stop", "stop_id": "215", "stop_name": "Paral·lel", "lines": ["L2", "L3"], "surface_elev_m": 14, "depth_m": 17 },
       "geometry": { "type": "Point", "coordinates": [2.1685, 41.3750] }
     },
     {
       "type": "Feature",
-      "properties": { "feature_type": "stop", "stop_id": "419", "stop_name": "Verdaguer", "lines": ["L4", "L5"] },
+      "properties": { "feature_type": "stop", "stop_id": "419", "stop_name": "Verdaguer", "lines": ["L4", "L5"], "surface_elev_m": 44, "depth_m": 21 },
       "geometry": { "type": "Point", "coordinates": [2.1669, 41.4024] }
     },
     {
       "type": "Feature",
-      "properties": { "feature_type": "stop", "stop_id": "515", "stop_name": "Collblanc", "lines": ["L5", "L9S", "L10S"] },
+      "properties": { "feature_type": "stop", "stop_id": "515", "stop_name": "Collblanc", "lines": ["L5", "L9S", "L10S"], "surface_elev_m": 54, "depth_m": 48 },
       "geometry": { "type": "Point", "coordinates": [2.1180, 41.3758] }
     },
     {
       "type": "Feature",
-      "properties": { "feature_type": "stop", "stop_id": "312", "stop_name": "Zona Universitària", "lines": ["L3", "L9S"] },
+      "properties": { "feature_type": "stop", "stop_id": "312", "stop_name": "Zona Universitària", "lines": ["L3", "L9S"], "surface_elev_m": 78, "depth_m": 42 },
       "geometry": { "type": "Point", "coordinates": [2.1119, 41.3843] }
     },
     {
       "type": "Feature",
-      "properties": { "feature_type": "stop", "stop_id": "335", "stop_name": "Trinitat Nova", "lines": ["L3", "L4", "L11"] },
+      "properties": { "feature_type": "stop", "stop_id": "335", "stop_name": "Trinitat Nova", "lines": ["L3", "L4", "L11"], "surface_elev_m": 82, "depth_m": 38 },
       "geometry": { "type": "Point", "coordinates": [2.1852, 41.4488] }
     },
     {
       "type": "Feature",
-      "properties": { "feature_type": "stop", "stop_id": "224", "stop_name": "Clot", "lines": ["L1", "L2"] },
+      "properties": { "feature_type": "stop", "stop_id": "224", "stop_name": "Clot", "lines": ["L1", "L2"], "surface_elev_m": 16, "depth_m": 15 },
       "geometry": { "type": "Point", "coordinates": [2.1870, 41.4096] }
     },
     {
       "type": "Feature",
-      "properties": { "feature_type": "stop", "stop_id": "424", "stop_name": "Barceloneta", "lines": ["L4"] },
+      "properties": { "feature_type": "stop", "stop_id": "424", "stop_name": "Barceloneta", "lines": ["L4"], "surface_elev_m": 5, "depth_m": 11 },
       "geometry": { "type": "Point", "coordinates": [2.1855, 41.3820] }
     },
     {
       "type": "Feature",
-      "properties": { "feature_type": "stop", "stop_id": "328", "stop_name": "Lesseps", "lines": ["L3"] },
+      "properties": { "feature_type": "stop", "stop_id": "328", "stop_name": "Lesseps", "lines": ["L3"], "surface_elev_m": 79, "depth_m": 26 },
       "geometry": { "type": "Point", "coordinates": [2.1502, 41.4018] }
     },
     {
       "type": "Feature",
-      "properties": { "feature_type": "stop", "stop_id": "520", "stop_name": "Hospital Clínic", "lines": ["L5"] },
+      "properties": { "feature_type": "stop", "stop_id": "520", "stop_name": "Hospital Clínic", "lines": ["L5"], "surface_elev_m": 38, "depth_m": 21 },
       "geometry": { "type": "Point", "coordinates": [2.1535, 41.3890] }
     },
     {
       "type": "Feature",
-      "properties": { "feature_type": "stop", "stop_id": "127", "stop_name": "Arc de Triomf", "lines": ["L1"] },
+      "properties": { "feature_type": "stop", "stop_id": "127", "stop_name": "Arc de Triomf", "lines": ["L1"], "surface_elev_m": 14, "depth_m": 10 },
       "geometry": { "type": "Point", "coordinates": [2.1802, 41.3911] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "feature_type": "stop", "stop_id": "532", "stop_name": "El Coll | La Teixonera (Deepest)", "lines": ["L5"], "surface_elev_m": 148, "depth_m": 74 },
+      "geometry": { "type": "Point", "coordinates": [2.1485, 41.4215] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "feature_type": "stop", "stop_id": "333", "stop_name": "Roquetes", "lines": ["L3"], "surface_elev_m": 112, "depth_m": 56 },
+      "geometry": { "type": "Point", "coordinates": [2.1725, 41.4421] }
     }
   ]
 }
