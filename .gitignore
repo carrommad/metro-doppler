@@ -6,5 +6,6 @@ venv/
 *.wav
 *.zip
 *.png
+!static/favicon.png
 .DS_Store
 
