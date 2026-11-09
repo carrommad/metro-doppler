@@ -11,7 +11,9 @@ import io
 import json
 import os
 import socket
+import time
 import traceback
+import urllib.request
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
@@ -23,6 +25,75 @@ from scipy import signal
 from scipy.io import wavfile
 
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+ENV_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+IMETRO_CACHE = {"ts": 0.0, "data": None}
+
+
+def load_local_env() -> dict:
+    env = {}
+    if os.path.exists(ENV_PATH):
+        with open(ENV_PATH, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    env[k.strip()] = v.strip()
+    return env
+
+
+def fetch_tmb_imetro() -> dict:
+    now = time.time()
+    if IMETRO_CACHE["data"] and (now - IMETRO_CACHE["ts"] < 12.0):
+        return IMETRO_CACHE["data"]
+
+    env = load_local_env()
+    app_id = os.environ.get("TMB_APP_ID") or env.get("TMB_APP_ID")
+    app_key = os.environ.get("TMB_APP_KEY") or env.get("TMB_APP_KEY")
+    if not app_id or not app_key:
+        return {"status": "no_credentials", "trains": []}
+
+    stops = "125,124,121,319,324,325,221,128,131,126,215,419,515,312,335,224,424,328,520,127"
+    url = f"https://api.tmb.cat/v1/itransit/metro/estacions?estacions={stops}&app_id={app_id}&app_key={app_key}"
+    req = urllib.request.urlopen(url, timeout=8)
+    raw = json.loads(req.read().decode("utf-8"))
+    api_ts_ms = raw.get("timestamp") or int(now * 1000)
+
+    # Extract each unique active physical train (codi_servei) and its soonest arrival station
+    by_train = {}
+    for linia in raw.get("linies", []):
+        nom_linia = linia.get("nom_linia")
+        color_linia = "#" + str(linia.get("color_linia", "3b82f6")).lstrip("#")
+        for est in linia.get("estacions", []):
+            codi_estacio = str(est.get("codi_estacio"))
+            id_sentit = est.get("id_sentit", 1)
+            for traj in est.get("linies_trajectes", []):
+                desti = traj.get("desti_trajecte", "")
+                for tren in traj.get("propers_trens", []):
+                    srv = str(tren.get("codi_servei", "")).strip()
+                    arr_ms = tren.get("temps_arribada")
+                    if not srv or not arr_ms:
+                        continue
+                    eta_sec = max(0.0, (arr_ms - api_ts_ms) / 1000.0)
+                    if srv not in by_train or eta_sec < by_train[srv]["eta_sec"]:
+                        by_train[srv] = {
+                            "codi_servei": srv,
+                            "nom_linia": nom_linia,
+                            "color_linia": color_linia,
+                            "codi_estacio": codi_estacio,
+                            "id_sentit": id_sentit,
+                            "desti_trajecte": desti,
+                            "eta_sec": round(eta_sec, 1),
+                        }
+
+    result = {
+        "status": "ok",
+        "source": "TMB i-Metro Live API",
+        "timestamp_ms": api_ts_ms,
+        "trains": list(by_train.values()),
+    }
+    IMETRO_CACHE["ts"] = now
+    IMETRO_CACHE["data"] = result
+    return result
 
 # Exact notebook scipy spectrogram parameters
 DEFAULT_SCIPY_PARAMS = {
@@ -203,6 +274,12 @@ class MetroDopplerHandler(SimpleHTTPRequestHandler):
                 "default_scipy_params": DEFAULT_SCIPY_PARAMS,
             }
             self._send_json(200, payload)
+            return
+        if parsed.path == "/api/imetro":
+            try:
+                self._send_json(200, fetch_tmb_imetro())
+            except Exception as exc:
+                self._send_json(200, {"status": "error", "error": str(exc), "trains": []})
             return
         return super().do_GET()
 

@@ -1028,6 +1028,70 @@ function initMetroTrainFleet(features) {
     trainAnimId = requestAnimationFrame(stepTrains);
   };
   trainAnimId = requestAnimationFrame(stepTrains);
+
+  // Poll live TMB i-Metro API (/api/imetro) every 15s to sync real train service IDs & arrivals
+  syncLiveIMetroTrains();
+  if (!window._imetroInterval) {
+    window._imetroInterval = setInterval(syncLiveIMetroTrains, 15000);
+  }
+}
+
+async function syncLiveIMetroTrains() {
+  try {
+    const r = await fetch("/api/imetro", { cache: "no-store" });
+    if (!r.ok) return;
+    const data = await r.json();
+    if (data.status !== "ok" || !Array.isArray(data.trains) || data.trains.length === 0) return;
+
+    const metaEl = document.getElementById("map-meta");
+    if (metaEl) {
+      metaEl.textContent = `TMB i-Metro LIVE (${data.trains.length} active trains synced via API) • Drag corner to resize`;
+    }
+
+    // Match live API trains onto line routes by line name and station proximity
+    const stopMap = {};
+    for (const f of APP_STATE.gtfsFeatures) {
+      if (f.geometry && f.geometry.type === "Point" && f.properties && f.properties.stop_id) {
+        stopMap[String(f.properties.stop_id)] = f.geometry.coordinates; // [lon, lat]
+      }
+    }
+
+    let idx = 0;
+    for (const apiTr of data.trains) {
+      if (idx >= trainFleet.length) break;
+      const tr = trainFleet.find((t) => t.lineName === apiTr.nom_linia && !t._synced) || trainFleet[idx++];
+      if (!tr) continue;
+      tr._synced = true;
+      tr.srvId = apiTr.codi_servei;
+      const pillHtml = `<div class="train-pill" style="background:${apiTr.color_linia || tr.color}">${apiTr.nom_linia} #${apiTr.codi_servei}</div>`;
+      tr.marker.setIcon(
+        window.L.divIcon({ className: "metro-train-icon", html: pillHtml, iconSize: [0, 0] })
+      );
+      tr.marker.setPopupContent(
+        `<strong>🚇 TMB Live Train #${apiTr.codi_servei} (${apiTr.nom_linia})</strong><br/>` +
+          `Destination: <b>${apiTr.desti_trajecte}</b><br/>` +
+          `Next Station ID: ${apiTr.codi_estacio} (ETA: ${apiTr.eta_sec}s)`
+      );
+
+      // Snap train distance along route near its upcoming station minus ETA * speed
+      const stCoord = stopMap[String(apiTr.codi_estacio)];
+      if (stCoord) {
+        let bestSeg = 0;
+        let bestD = Infinity;
+        for (let i = 0; i < tr.coords.length; i++) {
+          const d = haversineMeters(stCoord[1], stCoord[0], tr.coords[i][1], tr.coords[i][0]);
+          if (d < bestD) {
+            bestD = d;
+            bestSeg = i;
+          }
+        }
+        tr.dir = apiTr.id_sentit === 1 ? 1 : -1;
+        const offsetMeters = tr.dir * Math.min(800, apiTr.eta_sec * tr.speedMps);
+        tr.distPos = Math.max(0, Math.min(tr.totalLen, tr.segDists[bestSeg] - offsetMeters));
+      }
+    }
+    for (const t of trainFleet) delete t._synced;
+  } catch (_) {}
 }
 
 function updateNearestStation(lat, lon) {
