@@ -315,7 +315,7 @@ body {
 
 .settings-grid {
   display: grid;
-  grid-template-columns: 2fr 1.1fr 0.8fr 0.8fr auto;
+  grid-template-columns: 1.8fr 1fr 0.75fr 0.75fr 0.85fr 0.85fr auto;
   gap: 8px;
   align-items: end;
   padding-top: 6px;

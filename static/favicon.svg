@@ -20,3 +20,4 @@
   <polygon points="32,12 46,32 32,52 18,32" fill="#e2231a" stroke="#ffffff" stroke-width="2"/>
   <path d="M12 22 C 26 22, 29 26, 32 32 C 35 38, 38 42, 52 42" fill="none" stroke="url(#doppler)" stroke-width="4" stroke-linecap="round"/>
 </svg>
+

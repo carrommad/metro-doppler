@@ -32,6 +32,11 @@ const APP_STATE = {
   dspVerifiedOff: false,
   gpsFixes: [],
   latestGpsFix: null,
+  observationPoint: { lat: 41.3870, lon: 2.1700, source: "default-catalunya" },
+  manualPointSelected: false,
+  closestTrainsSnapshot: [],
+  expectedTrainTracks: {},
+  showExpectedOverlay: true,
   nearestStation: null,
   gtfsFeatures: [],
   pythonBackendAvailable: false,
@@ -587,7 +592,99 @@ function renderSpectrogramToCanvas(canvas, result) {
   ctx.fillText(`${vmax.toFixed(0)} dB`, cbX + cbW + 5, padTop + 10);
   ctx.fillText(`${vmin.toFixed(0)} dB`, cbX + cbW + 5, padTop + plotH);
 
+  drawExpectedMetroOverlay(ctx, padLeft, padTop, plotW, plotH);
   drawMeasureOverlay(ctx, padLeft, padTop, plotW, plotH);
+}
+
+/**
+ * Draws the expected Doppler signal band & trajectory from the closest moving Metro trains,
+ * shifted in time by ground acoustic propagation delay Δτ = distance / c_ground
+ * and in frequency by Doppler shift f_obs = f0 / (1 + v_radial / c_ground).
+ */
+function drawExpectedMetroOverlay(ctx, padLeft, padTop, plotW, plotH) {
+  if (!APP_STATE.showExpectedOverlay) return;
+  const tracks = Object.values(APP_STATE.expectedTrainTracks || {});
+  if (tracks.length === 0) return;
+
+  const { tMin, tMax, fMin, fMax } = SPEC_VIEW;
+  const cGround = Math.max(200, parseFloat(document.getElementById("input-c-ground")?.value) || 1500);
+  const f0Base = Math.max(40, parseFloat(document.getElementById("input-f0-train")?.value) || 440);
+  const harmonics = [0.5, 1.0, 2.0, 3.0];
+
+  const toX = (t) => padLeft + ((t - tMin) / Math.max(1e-6, tMax - tMin)) * plotW;
+  const toY = (f) => padTop + plotH - ((f - fMin) / Math.max(1e-6, fMax - fMin)) * plotH;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(padLeft, padTop, plotW, plotH);
+  ctx.clip();
+
+  for (const tr of tracks) {
+    const samples = tr.samples;
+    if (!samples || samples.length < 2) continue;
+
+    for (const hMult of harmonics) {
+      const fHarm = f0Base * hMult;
+      const isPrimary = hMult === 1.0;
+
+      // Shaded expected signal region (band width proportional to proximity 1/dist)
+      ctx.beginPath();
+      const upperPts = [];
+      const lowerPts = [];
+
+      for (let i = 0; i < samples.length; i++) {
+        const s = samples[i];
+        const delaySec = s.distM / cGround;
+        const tArrival = s.tEmit + delaySec;
+        const fShift = fHarm / (1.0 + s.vRadialMps / cGround);
+        // Stronger/wider expected signal zone when train is closer (< 600 m)
+        const proximity = Math.max(0.15, Math.min(1.0, 250.0 / Math.max(50.0, s.distM)));
+        const bandHz = (isPrimary ? 48 : 26) * proximity;
+        upperPts.push({ x: toX(tArrival), y: toY(fShift + bandHz), fShift, tArrival, delaySec, distM: s.distM });
+        lowerPts.push({ x: toX(tArrival), y: toY(Math.max(0, fShift - bandHz)) });
+      }
+
+      ctx.moveTo(upperPts[0].x, upperPts[0].y);
+      for (let i = 1; i < upperPts.length; i++) ctx.lineTo(upperPts[i].x, upperPts[i].y);
+      for (let i = lowerPts.length - 1; i >= 0; i--) ctx.lineTo(lowerPts[i].x, lowerPts[i].y);
+      ctx.closePath();
+      ctx.fillStyle = isPrimary ? "rgba(56, 189, 248, 0.18)" : "rgba(56, 189, 248, 0.08)";
+      ctx.fill();
+
+      // Center expected Doppler line
+      ctx.beginPath();
+      for (let i = 0; i < upperPts.length; i++) {
+        const yCenter = (upperPts[i].y + lowerPts[i].y) * 0.5;
+        if (i === 0) ctx.moveTo(upperPts[i].x, yCenter);
+        else ctx.lineTo(upperPts[i].x, yCenter);
+      }
+      ctx.strokeStyle = isPrimary ? (tr.color || "#38bdf8") : "rgba(147, 197, 253, 0.55)";
+      ctx.lineWidth = isPrimary ? 2.2 : 1.2;
+      ctx.setLineDash(isPrimary ? [] : [5, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Label primary harmonic with train ID, distance & ground delay Δτ
+      if (isPrimary && upperPts.length > 0) {
+        const last = upperPts[upperPts.length - 1];
+        const yCenter = (last.y + lowerPts[lowerPts.length - 1].y) * 0.5;
+        const lbl = `🚇 ${tr.lineName} #${tr.srvId} (${Math.round(last.distM)}m, Δτ=${(last.delaySec * 1000).toFixed(0)}ms)`;
+        ctx.font = "600 10.5px monospace";
+        const tw = ctx.measureText(lbl).width + 10;
+        const lx = Math.max(padLeft + 6, Math.min(padLeft + plotW - tw - 6, last.x - tw - 4));
+        const ly = Math.max(padTop + 16, Math.min(padTop + plotH - 8, yCenter - 6));
+        ctx.fillStyle = "rgba(9, 13, 22, 0.88)";
+        ctx.fillRect(lx, ly - 12, tw, 17);
+        ctx.strokeStyle = tr.color || "#38bdf8";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(lx, ly - 12, tw, 17);
+        ctx.fillStyle = "#f8fafc";
+        ctx.textAlign = "left";
+        ctx.fillText(lbl, lx + 5, ly);
+      }
+    }
+  }
+  ctx.restore();
 }
 
 function drawMeasureOverlay(ctx, padLeft, padTop, plotW, plotH) {
@@ -844,9 +941,44 @@ function zoomSpectrogram(factor, anchorFx = 0.5, anchorFy = 0.5) {
 
 let mapInstance = null;
 let gtfsLayerGroup = null;
+let radarLayerGroup = null;
+let obsMarker = null;
 let userMarker = null;
 let userAccuracyCircle = null;
 let userTrackLine = null;
+
+function setObservationPoint(lat, lon, source = "map-click") {
+  APP_STATE.observationPoint = {
+    lat: Number(lat.toFixed(6)),
+    lon: Number(lon.toFixed(6)),
+    source,
+  };
+  APP_STATE.manualPointSelected = source === "map-click";
+
+  const coordsEl = document.getElementById("gps-coords");
+  if (coordsEl) {
+    coordsEl.textContent = `${lat.toFixed(5)}, ${lon.toFixed(5)} (${source === "map-click" ? "Selected Point" : "GPS"})`;
+  }
+
+  if (mapInstance) {
+    const latlng = [lat, lon];
+    if (!obsMarker) {
+      obsMarker = window.L.circleMarker(latlng, {
+        radius: 8,
+        fillColor: "#facc15",
+        color: "#090d16",
+        weight: 2.5,
+        fillOpacity: 1.0,
+      })
+        .addTo(mapInstance)
+        .bindPopup("🎯 Selected Acoustic Observation Point (Click map to move)");
+    } else {
+      obsMarker.setLatLng(latlng);
+    }
+  }
+
+  updateNearestStation(lat, lon);
+}
 
 function haversineMeters(lat1, lon1, lat2, lon2) {
   const R = 6371000;
@@ -873,11 +1005,18 @@ function initMap() {
   }).addTo(mapInstance);
 
   gtfsLayerGroup = window.L.layerGroup().addTo(mapInstance);
+  radarLayerGroup = window.L.layerGroup().addTo(mapInstance);
   userTrackLine = window.L.polyline([], {
     color: "#38bdf8",
     weight: 3,
     dashArray: "4 4",
   }).addTo(mapInstance);
+
+  // Place initial observation marker and allow clicking anywhere on map to select observation point
+  setObservationPoint(APP_STATE.observationPoint.lat, APP_STATE.observationPoint.lon, "default-catalunya");
+  mapInstance.on("click", (ev) => {
+    setObservationPoint(ev.latlng.lat, ev.latlng.lng, "map-click");
+  });
 
   fetch("tmb_metro.geojson")
     .then((r) => r.json())
@@ -1023,8 +1162,12 @@ function initMetroTrainFleet(features) {
       const frac = d1 > d0 ? (d - d0) / (d1 - d0) : 0;
       const lon = tr.coords[idx][0] + frac * (tr.coords[idx + 1][0] - tr.coords[idx][0]);
       const lat = tr.coords[idx][1] + frac * (tr.coords[idx + 1][1] - tr.coords[idx][1]);
+      tr.lat = lat;
+      tr.lon = lon;
+      tr.segIdx = idx;
       tr.marker.setLatLng([lat, lon]);
     }
+    updateClosestTrainsRadar(now);
     trainAnimId = requestAnimationFrame(stepTrains);
   };
   trainAnimId = requestAnimationFrame(stepTrains);
@@ -1092,6 +1235,109 @@ async function syncLiveIMetroTrains() {
     }
     for (const t of trainFleet) delete t._synced;
   } catch (_) {}
+}
+
+let lastRadarUpdatePerf = 0;
+
+function updateClosestTrainsRadar(now) {
+  if (now - lastRadarUpdatePerf < 140) return;
+  lastRadarUpdatePerf = now;
+
+  const obs = APP_STATE.observationPoint;
+  if (!obs || trainFleet.length === 0) return;
+
+  const cGround = Math.max(200, parseFloat(document.getElementById("input-c-ground")?.value) || 1500);
+  const f0Base = Math.max(40, parseFloat(document.getElementById("input-f0-train")?.value) || 440);
+  const cosLat = Math.cos((obs.lat * Math.PI) / 180.0);
+
+  const ranked = [];
+  for (const tr of trainFleet) {
+    if (tr.lat === undefined || tr.lon === undefined) continue;
+    const distM = haversineMeters(obs.lat, obs.lon, tr.lat, tr.lon);
+
+    // Compute unit tangent along track and radial velocity v_r = v_train · r_hat (positive = receding, negative = approaching)
+    const idx = tr.segIdx || 0;
+    const dxTrack = (tr.coords[idx + 1][0] - tr.coords[idx][0]) * cosLat * 111320 * tr.dir;
+    const dyTrack = (tr.coords[idx + 1][1] - tr.coords[idx][1]) * 110540 * tr.dir;
+    const trackNorm = Math.max(1e-6, Math.hypot(dxTrack, dyTrack));
+    const vx = (dxTrack / trackNorm) * tr.speedMps;
+    const vy = (dyTrack / trackNorm) * tr.speedMps;
+
+    const rx = (tr.lon - obs.lon) * cosLat * 111320;
+    const ry = (tr.lat - obs.lat) * 110540;
+    const rNorm = Math.max(1.0, Math.hypot(rx, ry));
+    const vRadialMps = (vx * rx + vy * ry) / rNorm;
+    const groundDelaySec = distM / cGround;
+    const fExpectedHz = f0Base / (1.0 + vRadialMps / cGround);
+
+    ranked.push({
+      srvId: tr.srvId,
+      lineName: tr.lineName,
+      color: tr.color,
+      lat: tr.lat,
+      lon: tr.lon,
+      distM,
+      vRadialMps,
+      groundDelaySec,
+      fExpectedHz,
+    });
+  }
+
+  ranked.sort((a, b) => a.distM - b.distM);
+  const closest = ranked.slice(0, 3);
+  APP_STATE.closestTrainsSnapshot = closest;
+
+  // Draw dashed ground-propagation rays from selected observation point to the 3 closest trains
+  if (radarLayerGroup) {
+    radarLayerGroup.clearLayers();
+    for (let i = 0; i < closest.length; i++) {
+      const c = closest[i];
+      window.L.polyline(
+        [
+          [obs.lat, obs.lon],
+          [c.lat, c.lon],
+        ],
+        {
+          color: c.color || "#facc15",
+          weight: i === 0 ? 2.5 : 1.5,
+          opacity: i === 0 ? 0.9 : 0.55,
+          dashArray: "5 5",
+        }
+      ).addTo(radarLayerGroup);
+    }
+  }
+
+  const el = document.getElementById("closest-trains-live");
+  if (el) {
+    el.innerHTML = closest
+      .map(
+        (c) =>
+          `<span style="color:${c.color};font-weight:700">${c.lineName}#${c.srvId}</span> ` +
+          `${Math.round(c.distM)}m (Δτ=${(c.groundDelaySec * 1000).toFixed(0)}ms, f≈${c.fExpectedHz.toFixed(0)}Hz)`
+      )
+      .join(" · ");
+  }
+
+  // Log kinematics during recording for the spectrogram expected-signal region overlay
+  if (APP_STATE.isRecording) {
+    const tEmit = (performance.now() - APP_STATE.recordingStartPerf) / 1000.0;
+    for (const c of closest.slice(0, 2)) {
+      const key = `${c.lineName}_${c.srvId}`;
+      if (!APP_STATE.expectedTrainTracks[key]) {
+        APP_STATE.expectedTrainTracks[key] = {
+          srvId: c.srvId,
+          lineName: c.lineName,
+          color: c.color,
+          samples: [],
+        };
+      }
+      APP_STATE.expectedTrainTracks[key].samples.push({
+        tEmit,
+        distM: c.distM,
+        vRadialMps: c.vRadialMps,
+      });
+    }
+  }
 }
 
 function updateNearestStation(lat, lon) {
@@ -1175,7 +1421,9 @@ function initGeolocation() {
       }
 
       if (APP_STATE.isRecording && userTrackLine) userTrackLine.addLatLng(latlng);
-      updateNearestStation(fix.lat, fix.lon);
+      if (!APP_STATE.manualPointSelected) {
+        setObservationPoint(fix.lat, fix.lon, "gps");
+      }
       updateContextPreview();
     },
     (err) => {
@@ -1398,9 +1646,13 @@ function buildContextJson() {
         }
       : null,
     geolocation_and_gtfs: {
+      observation_point: APP_STATE.observationPoint,
+      ground_speed_mps: APP_STATE.cGround,
       latest_gps_fix: APP_STATE.latestGpsFix,
       gps_trajectory_during_recording: APP_STATE.gpsFixes,
       nearest_tmb_station: APP_STATE.nearestStation,
+      closest_trains_snapshot: APP_STATE.closestTrainsSnapshot,
+      expected_train_tracks: APP_STATE.expectedTrainTracks,
     },
   };
 }
@@ -1563,6 +1815,8 @@ async function startRecording() {
   APP_STATE.recordingStartTimeIso = new Date().toISOString();
   APP_STATE.recordingEndTimeIso = null;
   APP_STATE.recordingStartPerf = performance.now();
+  APP_STATE.expectedTrainTracks = {};
+  updateClosestTrainsRadar(APP_STATE.recordingStartPerf);
 
   document.getElementById("btn-record").disabled = true;
   document.getElementById("btn-record").classList.add("recording-active");
@@ -1798,6 +2052,45 @@ async function simulateMetroPassBy() {
   document.getElementById("rec-timer").textContent = `00:0${duration.toFixed(1)}`;
   document.getElementById("rec-samples").textContent = `(${N.toLocaleString()} samples)`;
 
+  // Populate expected train track for the simulated pass-by + current closest map trains
+  const simPoints = [];
+  for (let t = 0; t <= duration; t += 0.1) {
+    const xPos = v * (t - t0);
+    const dist = Math.sqrt(xPos * xPos + d0 * d0);
+    const radialVel = (v * xPos) / dist;
+    simPoints.push({
+      t_emit_sec: Number(t.toFixed(2)),
+      dist_m: Number(dist.toFixed(1)),
+      v_radial_mps: Number(radialVel.toFixed(2)),
+    });
+  }
+  APP_STATE.expectedTrainTracks = {
+    "SIM-L1": {
+      id: "SIM-L1",
+      lineName: "L1",
+      color: "#ef4444",
+      dest: "Simulated Pass-By",
+      points: simPoints,
+    },
+  };
+  for (const tr of APP_STATE.closestTrainsSnapshot.slice(0, 2)) {
+    const pts = [];
+    for (let t = 0; t <= duration; t += 0.5) {
+      pts.push({
+        t_emit_sec: t,
+        dist_m: Math.max(10, Math.round(tr.dist_m + tr.v_radial_mps * t)),
+        v_radial_mps: tr.v_radial_mps,
+      });
+    }
+    APP_STATE.expectedTrainTracks[tr.id] = {
+      id: tr.id,
+      lineName: tr.lineName,
+      color: tr.color,
+      dest: tr.dest,
+      points: pts,
+    };
+  }
+
   await finalizeAudioAndComputeHighRes();
 }
 
@@ -1870,10 +2163,46 @@ window.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-download-bundle").addEventListener("click", () => downloadBundleZip());
 
   document.getElementById("btn-locate").addEventListener("click", () => {
-    if (APP_STATE.latestGpsFix && mapInstance) {
-      mapInstance.setView([APP_STATE.latestGpsFix.lat, APP_STATE.latestGpsFix.lon], 15);
+    const pt = APP_STATE.observationPoint || APP_STATE.latestGpsFix;
+    if (pt && mapInstance) {
+      mapInstance.setView([pt.lat, pt.lon], 15);
     }
   });
+
+  const btnUseGps = document.getElementById("btn-use-gps");
+  if (btnUseGps) {
+    btnUseGps.addEventListener("click", () => {
+      APP_STATE.manualPointSelected = false;
+      if (APP_STATE.latestGpsFix) {
+        setObservationPoint(APP_STATE.latestGpsFix.lat, APP_STATE.latestGpsFix.lon, "gps");
+      } else {
+        setObservationPoint(41.387, 2.17, "default");
+      }
+    });
+  }
+
+  const chkExpected = document.getElementById("chk-expected-overlay");
+  if (chkExpected) {
+    chkExpected.addEventListener("change", (ev) => {
+      APP_STATE.showExpectedOverlay = ev.target.checked;
+      renderSpectrogramToCanvas(hiresCanvas);
+    });
+  }
+
+  const inputCGround = document.getElementById("input-c-ground");
+  if (inputCGround) {
+    inputCGround.addEventListener("change", () => {
+      updateClosestTrainsRadar(performance.now());
+      renderSpectrogramToCanvas(hiresCanvas);
+    });
+  }
+
+  const inputF0Train = document.getElementById("input-f0-train");
+  if (inputF0Train) {
+    inputF0Train.addEventListener("change", () => {
+      renderSpectrogramToCanvas(hiresCanvas);
+    });
+  }
 
   document.getElementById("input-gtfs-file").addEventListener("change", (ev) => {
     const file = ev.target.files && ev.target.files[0];

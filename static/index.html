@@ -95,6 +95,14 @@
           <label for="input-fmax">Max Freq (Hz)</label>
           <input id="input-fmax" type="number" value="4000" min="200" max="96000" step="100" />
         </div>
+        <div class="field" title="Ground acoustic/seismic wave propagation speed (m/s) used for distance delay Δτ = d / c_ground">
+          <label for="input-c-ground">Ground Speed (m/s)</label>
+          <input id="input-c-ground" type="number" value="1500" min="200" max="5000" step="50" />
+        </div>
+        <div class="field" title="Base train emission frequency (Hz) for expected Doppler curve overlay">
+          <label for="input-f0-train">Train Base f₀ (Hz)</label>
+          <input id="input-f0-train" type="number" value="440" min="50" max="3500" step="10" />
+        </div>
         <div class="field field-btn">
           <button id="btn-recompute" class="btn btn-outline" disabled>Recompute</button>
         </div>
@@ -116,6 +124,10 @@
             📏 Measure Δt / Δf
           </button>
           <button id="btn-clear-measure" class="btn btn-xs btn-outline hidden">✕ Clear</button>
+          <label class="toggle-label" title="Overlay expected Doppler signal region & line from closest moving trains (including ground transmission delay)">
+            <input id="chk-expected-overlay" type="checkbox" checked />
+            <span>🎯 Expected Metro Signal</span>
+          </label>
           <label class="toggle-label" title="2D Bilinear sub-pixel interpolation in dB space for smooth zoomed-in spectrograms">
             <input id="chk-smooth" type="checkbox" checked />
             <span>Smooth Zoom</span>
@@ -148,11 +160,12 @@
     <section id="panel-map" class="card resizable-panel map-panel">
       <div class="card-header">
         <div>
-          <h2>TMB Static GTFS &amp; User GPS <span class="tag">Leaflet</span></h2>
-          <p class="card-meta" id="map-meta">Barcelona Metro Lines (L1–L5, L9–L11) &amp; Live Geolocation (drag corner to resize)</p>
+          <h2>TMB Static GTFS &amp; Observation Point <span class="tag">Click Map to Set Point</span></h2>
+          <p class="card-meta" id="map-meta">Click anywhere on the map to place the acoustic sensor point &amp; track closest trains</p>
         </div>
         <div class="map-actions">
-          <button id="btn-locate" class="btn btn-sm btn-outline">Center GPS</button>
+          <button id="btn-use-gps" class="btn btn-sm btn-outline" title="Snap observation point back to live GPS">Snap to GPS</button>
+          <button id="btn-locate" class="btn btn-sm btn-outline">Center Point</button>
           <label class="btn btn-sm btn-outline file-label" title="Load custom GTFS .zip (shapes.txt/routes.txt/stops.txt) or .geojson">
             Load GTFS (.zip / .geojson)
             <input id="input-gtfs-file" type="file" accept=".zip,.geojson,.json" hidden />
@@ -161,9 +174,9 @@
       </div>
       <div id="map" class="map-container"></div>
       <div class="gtfs-summary" id="gtfs-summary">
-        <div><strong>Nearest Station:</strong> <span id="nearest-station">—</span></div>
-        <div><strong>Lines:</strong> <span id="nearest-lines">—</span></div>
-        <div><strong>Coords:</strong> <span id="gps-coords" class="mono">—</span></div>
+        <div><strong>Observation Point:</strong> <span id="gps-coords" class="mono">41.38700, 2.17000 (Click map)</span></div>
+        <div><strong>Closest Station:</strong> <span id="nearest-station">—</span> (<span id="nearest-lines">—</span>)</div>
+        <div><strong>Closest Live Trains &amp; Ground Delay:</strong> <span id="closest-trains-live" class="mono">—</span></div>
       </div>
     </section>
   </main>
