@@ -142,7 +142,7 @@ body {
 .resizable-panel {
   width: 86vw;
   max-width: 1440px;
-  min-width: 480px;
+  min-width: 0;
   resize: both;
   overflow: hidden;
   position: relative;
@@ -598,3 +598,97 @@ body {
 }
 .resizable-panel.minimized > *:not(.panel-minbar) { display: none !important; }
 .resizable-panel.minimized::after { display: none; }
+
+/* Responsive adjustments for mobile / phone screens */
+@media (max-width: 768px) {
+  .topbar {
+    padding: 8px 12px;
+  }
+
+  .stacked-workspace {
+    padding: 10px 2.5vw 20px 2.5vw;
+    gap: 12px;
+  }
+
+  .resizable-panel {
+    width: 95vw;
+    min-width: 0;
+    max-width: 100%;
+    padding: 30px 10px 12px 10px;
+  }
+
+  .spec-panel {
+    height: auto;
+    min-height: 400px;
+  }
+
+  .prox-panel {
+    height: 320px;
+    min-height: 260px;
+  }
+
+  .map-panel {
+    height: 520px;
+    min-height: 420px;
+  }
+
+  .controls-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .btn-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .btn-group #btn-synth {
+    grid-column: span 2;
+  }
+
+  .export-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .export-actions .btn {
+    width: 100%;
+  }
+
+  .settings-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .field-btn {
+    grid-column: span 2;
+  }
+
+  .field-btn button {
+    width: 100%;
+  }
+
+  .gtfs-summary {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    font-size: 11px;
+  }
+
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .map-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    width: 100%;
+  }
+
+  .map-actions .btn {
+    flex: 1 1 auto;
+  }
+}

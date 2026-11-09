@@ -463,8 +463,8 @@ function setSpectrogramData(canvas, result) {
 }
 
 function renderSpectrogramToCanvas(canvas, result) {
-  if (!result) result = SPEC_VIEW.result;
-  if (!result || !result.sxxDb) return;
+  if (!canvas) canvas = document.getElementById("hires-canvas");
+  if (!canvas) return;
 
   const ctx = canvas.getContext("2d");
   const W = canvas.width;
@@ -475,6 +475,48 @@ function renderSpectrogramToCanvas(canvas, result) {
   const { left: padLeft, right: padRight, top: padTop, bottom: padBottom } = SPEC_VIEW.pad;
   const plotW = W - padLeft - padRight;
   const plotH = H - padTop - padBottom;
+
+  if (!result) result = SPEC_VIEW.result;
+  if (!result || !result.sxxDb) {
+    // Render standby grid and expected proximity bars so the view is always active
+    ctx.fillStyle = "#070b12";
+    ctx.fillRect(padLeft, padTop, plotW, plotH);
+    ctx.strokeStyle = "#1e293b";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(padLeft, padTop, plotW, plotH);
+
+    ctx.fillStyle = "#e2e8f0";
+    ctx.font = "600 12px Inter, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("High-Res Spectrogram (Standby — click Start Recording or Simulate Pass-By)", padLeft, 21);
+
+    ctx.fillStyle = "#64748b";
+    ctx.font = "12px Inter, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Awaiting audio input — closest live Metro proximity tracks below", padLeft + plotW / 2, padTop + plotH / 2);
+
+    // X-axis ticks
+    const barsBottomY = padTop + plotH + 62;
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "11px monospace";
+    for (let i = 0; i <= 6; i++) {
+      const frac = i / 6;
+      const tVal = frac * 6.0;
+      const xPos = padLeft + frac * plotW;
+      ctx.fillText(`${tVal.toFixed(1)}s`, xPos, barsBottomY + 16);
+      ctx.beginPath();
+      ctx.moveTo(xPos, barsBottomY);
+      ctx.lineTo(xPos, barsBottomY + 4);
+      ctx.strokeStyle = "#475569";
+      ctx.stroke();
+    }
+    ctx.fillText("Time (s)", padLeft + plotW / 2, H - 4);
+
+    drawExpectedMetroOverlay(ctx, padLeft, padTop, plotW, plotH);
+    renderProximityGraphToCanvas();
+    return;
+  }
 
   const numFrames = result.time_bins;
   const numBins = result.freq_bins;
@@ -1626,9 +1668,11 @@ function updateClosestTrainsRadar(now) {
     if (SPEC_VIEW.result) {
       renderSpectrogramToCanvas(document.getElementById("hires-canvas"));
     } else {
+      renderSpectrogramToCanvas(document.getElementById("hires-canvas"));
       renderProximityGraphToCanvas();
     }
   } else if (!SPEC_VIEW.result) {
+    renderSpectrogramToCanvas(document.getElementById("hires-canvas"));
     renderProximityGraphToCanvas();
   }
 }
@@ -2385,7 +2429,7 @@ function refreshStaticExpectedTracksFromPoint(durationOverride = null) {
 
 // Returns up to 4 tracks with real logged samples, sorted by ground-delayed arrival time
 function getProximityTracks(cGround) {
-  return Object.values(APP_STATE.expectedTrainTracks || {})
+  let tracks = Object.values(APP_STATE.expectedTrainTracks || {})
     .filter((t) => t && t.samples && t.samples.length >= 2)
     .map((t) => {
       const pts = t.samples
@@ -2395,8 +2439,31 @@ function getProximityTracks(cGround) {
       for (const p of pts) if (p.d < cpa.d) cpa = p;
       return { ...t, pts, cpa };
     })
-    .sort((a, b) => a.cpa.d - b.cpa.d)
-    .slice(0, 4);
+    .sort((a, b) => a.cpa.d - b.cpa.d);
+
+  // If no recorded tracks exist yet (e.g. initial view before recording), preview the closest live map trains
+  if (tracks.length === 0 && APP_STATE.closestTrainsSnapshot && APP_STATE.closestTrainsSnapshot.length > 0) {
+    const dur = SPEC_VIEW.result ? SPEC_VIEW.result.duration_sec : 6.0;
+    return APP_STATE.closestTrainsSnapshot.slice(0, 4).map((c, i) => {
+      const tPeak = dur * (0.2 + i * 0.2);
+      const pts = [];
+      for (let t = 0; t <= dur; t += 0.2) {
+        const d = Math.hypot(17.5 * (t - tPeak), c.distM);
+        pts.push({ t, d, delay: d / cGround });
+      }
+      let cpa = pts[0];
+      for (const p of pts) if (p.d < cpa.d) cpa = p;
+      return {
+        srvId: c.srvId,
+        lineName: c.lineName,
+        color: c.color,
+        pts,
+        cpa,
+      };
+    });
+  }
+
+  return tracks.slice(0, 4);
 }
 
 
@@ -2479,6 +2546,7 @@ window.addEventListener("DOMContentLoaded", () => {
   checkPythonBackend();
 
   // Keep Leaflet map, Proximity Graph, and Spectrogram crisp whenever the user drag-resizes any panel
+  renderSpectrogramToCanvas(hiresCanvas);
   renderProximityGraphToCanvas();
   if (window.ResizeObserver) {
     const mapPanel = document.getElementById("panel-map");
@@ -2486,7 +2554,7 @@ window.addEventListener("DOMContentLoaded", () => {
     const proxPanel = document.getElementById("panel-proximity");
     const ro = new ResizeObserver(() => {
       if (mapInstance) mapInstance.invalidateSize();
-      if (SPEC_VIEW.result) renderSpectrogramToCanvas(hiresCanvas);
+      renderSpectrogramToCanvas(hiresCanvas);
       renderProximityGraphToCanvas();
     });
     if (mapPanel) ro.observe(mapPanel);
