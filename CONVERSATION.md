@@ -1,7 +1,9 @@
 # Metro Doppler Hybrid Web App
 > **Target:** `metro-doppler` (main)
 
+- 2026-11-09T22:50:30+01:00 | Created comprehensive README.md with application documentation, quickstart instructions, parameter tables, and user screenshots saved in `docs/images/` | DONE
 - 2026-11-09T22:43:15+01:00 | Fixed minimum distance envelope calculation so the single minimum distance curve reliably renders across all recording durations, with colored circles and the live-distance legend intact | DONE
+- 2026-11-09T22:42:00+01:00 | Enhanced distance graph legend with real-time live distance, minimum distance, ground transmission delay, and metro line color indicators | DONE
 - 2026-11-09T22:42:00+01:00 | Enhanced distance graph legend with real-time live distance, minimum distance, ground transmission delay, and metro line color indicators | DONE
 - 2026-11-09T22:41:10+01:00 | Simplified distance graph to a single continuous lower-envelope line representing the minimum distance across all metros at every point in time, with colored circles highlighting the closest metro line points | DONE
 - 2026-11-09T22:38:50+01:00 | Added panel minimization toggle (`−`/`+`) with title bars on all panels, simplified proximity graph to display discrete minimum-distance points with colored Metro line circles and labels | DONE
