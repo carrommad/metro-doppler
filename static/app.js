@@ -705,9 +705,57 @@ function renderProximityGraphToCanvas() {
   }
 
   // Auto-fit Y range (metres), closest at top, with 8% margin
+  // Compute the continuous lower-envelope (minimum distance across ALL metros at any time t)
+  // Gather all unique timestamps across all tracks
+  const allTimesSet = new Set();
+  for (const tr of tracks) {
+    for (const p of tr.pts) allTimesSet.add(p.t);
+  }
+  const allTimes = Array.from(allTimesSet).sort((a, b) => a - b);
+
+  // For each timestamp, find the closest metro train
+  const minEnvelope = [];
+  for (const t of allTimes) {
+    let bestDist = Infinity;
+    let bestTr = null;
+    for (const tr of tracks) {
+      if (tr.pts.length < 2) continue;
+      // Interpolate distance along this train's track at time t
+      if (t < tr.pts[0].t || t > tr.pts[tr.pts.length - 1].t) continue;
+      // Find segment
+      for (let i = 0; i < tr.pts.length - 1; i++) {
+        const p0 = tr.pts[i];
+        const p1 = tr.pts[i + 1];
+        if (t >= p0.t && t <= p1.t) {
+          const frac = (p1.t - p0.t) > 1e-5 ? (t - p0.t) / (p1.t - p0.t) : 0;
+          const dInterp = p0.d + frac * (p1.d - p0.d);
+          if (dInterp < bestDist) {
+            bestDist = dInterp;
+            bestTr = tr;
+          }
+          break;
+        }
+      }
+    }
+    if (bestTr) {
+      minEnvelope.push({ t, d: bestDist, tr: bestTr });
+    }
+  }
+
+  // Fallback if sparse
+  if (minEnvelope.length === 0) {
+    for (const tr of tracks) {
+      for (const p of tr.pts) minEnvelope.push({ t: p.t, d: p.d, tr });
+    }
+    minEnvelope.sort((a, b) => a.t - b.t);
+  }
+
   let dLo = Infinity, dHi = 0;
-  for (const tr of tracks) for (const p of tr.pts) { dLo = Math.min(dLo, p.d); dHi = Math.max(dHi, p.d); }
-  const m = Math.max(2, (dHi - dLo) * 0.08);
+  for (const p of minEnvelope) {
+    dLo = Math.min(dLo, p.d);
+    dHi = Math.max(dHi, p.d);
+  }
+  const m = Math.max(10, (dHi - dLo) * 0.1);
   dLo = Math.max(0, dLo - m);
   dHi = dHi + m;
   const toY = (d) => padTop + ((d - dLo) / Math.max(1e-6, dHi - dLo)) * plotH;
@@ -730,41 +778,83 @@ function renderProximityGraphToCanvas() {
   ctx.beginPath();
   ctx.rect(padLeft, padTop, plotW, plotH);
   ctx.clip();
-  for (const tr of tracks) {
-    const color = tr.color || "#38bdf8";
-    const cx = toX(tr.cpa.t), cy = toY(tr.cpa.d);
 
-    // Subtle vertical guideline from minimum distance point to time axis
-    ctx.strokeStyle = "rgba(148, 163, 184, 0.25)";
+  // Draw the single continuous minimum distance line for all metros
+  if (minEnvelope.length >= 2) {
+    ctx.lineWidth = 2.8;
+    for (let i = 0; i < minEnvelope.length - 1; i++) {
+      const p0 = minEnvelope[i];
+      const p1 = minEnvelope[i + 1];
+      ctx.strokeStyle = p0.tr.color || "#38bdf8";
+      ctx.beginPath();
+      ctx.moveTo(toX(p0.t), toY(p0.d));
+      ctx.lineTo(toX(p1.t), toY(p1.d));
+      ctx.stroke();
+    }
+  }
+
+  // Identify local minima or closest points on this minimum envelope
+  let globalMinPt = minEnvelope[0];
+  for (const p of minEnvelope) {
+    if (p.d < globalMinPt.d) globalMinPt = p;
+  }
+
+  // Draw colored circle with the color of the metro line at the closest approaches
+  // (Both global minimum and each train's cpa if it touches the min envelope)
+  const drawnPoints = [];
+  for (const tr of tracks) {
+    const cx = toX(tr.cpa.t);
+    const cy = toY(tr.cpa.d);
+    const color = tr.color || "#38bdf8";
+
+    // Only draw circle if close to the envelope or the closest moment
+    if (Math.abs(tr.cpa.d - globalMinPt.d) < (dHi - dLo) * 0.45) {
+      drawnPoints.push({ cx, cy, color, tr });
+    }
+  }
+  if (drawnPoints.length === 0 && globalMinPt) {
+    drawnPoints.push({
+      cx: toX(globalMinPt.t),
+      cy: toY(globalMinPt.d),
+      color: globalMinPt.tr.color || "#38bdf8",
+      tr: globalMinPt.tr
+    });
+  }
+
+  for (const pt of drawnPoints) {
+    // Dotted vertical guideline
+    ctx.strokeStyle = "rgba(148, 163, 184, 0.3)";
     ctx.lineWidth = 1;
     ctx.setLineDash([3, 3]);
     ctx.beginPath();
-    ctx.moveTo(cx, padTop);
-    ctx.lineTo(cx, padTop + plotH);
+    ctx.moveTo(pt.cx, padTop);
+    ctx.lineTo(pt.cx, padTop + plotH);
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Big colored circle showing the Metro line color
-    ctx.fillStyle = color;
+    // Outer colored circle with metro color
+    ctx.fillStyle = pt.color;
     ctx.beginPath();
-    ctx.arc(cx, cy, 7, 0, Math.PI * 2);
+    ctx.arc(pt.cx, pt.cy, 8, 0, Math.PI * 2);
     ctx.fill();
 
-    // White core and dark outer border for crisp contrast
-    ctx.lineWidth = 2;
+    // White outline
+    ctx.lineWidth = 2.2;
     ctx.strokeStyle = "#ffffff";
     ctx.stroke();
+
+    // Inner bright center dot
     ctx.fillStyle = "#ffffff";
     ctx.beginPath();
-    ctx.arc(cx, cy, 2.5, 0, Math.PI * 2);
+    ctx.arc(pt.cx, pt.cy, 2.5, 0, Math.PI * 2);
     ctx.fill();
 
-    // Text tag next to the circle
+    // Label with metro line and minimum distance
     ctx.font = "bold 11px monospace";
-    ctx.fillStyle = color;
+    ctx.fillStyle = pt.color;
     ctx.textAlign = "left";
-    const lbl = `${tr.lineName} (${Math.round(tr.cpa.d)}m)`;
-    ctx.fillText(lbl, cx + 11, cy + 4);
+    const lbl = `${pt.tr.lineName} (${Math.round(pt.tr.cpa.d)}m)`;
+    ctx.fillText(lbl, pt.cx + 12, pt.cy + 4);
   }
   ctx.restore();
 

@@ -1,6 +1,7 @@
 # Metro Doppler Hybrid Web App
 > **Target:** `metro-doppler` (main)
 
+- 2026-11-09T22:41:10+01:00 | Simplified distance graph to a single continuous lower-envelope line representing the minimum distance across all metros at every point in time, with colored circles highlighting the closest metro line points | DONE
 - 2026-11-09T22:38:50+01:00 | Added panel minimization toggle (`−`/`+`) with title bars on all panels, simplified proximity graph to display discrete minimum-distance points with colored Metro line circles and labels | DONE
 - 2026-11-09T22:36:30+01:00 | Decluttered proximity views: real logged samples only (no synthetic curves; SIM track only in simulation), graph Y-axis = real 3D distance in metres (auto-fit, closest on top), thin lines + ◆ + legend; bars use same data (`getProximityTracks`) | DONE
 - 2026-11-09T22:30:30+01:00 | Placed 4 Metro Line Proximity Bars directly below the spectrogram inside the top panel (`drawExpectedMetroOverlay`) AND added a dedicated full-resolution **3D Distance & Target Proximity Graph** middle box (`#panel-proximity` / `renderProximityGraphToCanvas`) with the Horizontal Top Max (`CLOSEST`) reference line | DONE
