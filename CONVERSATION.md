@@ -1,6 +1,7 @@
 # Metro Doppler Hybrid Web App
 > **Target:** `metro-doppler` (main)
 
+- 2026-11-09T22:21:35+01:00 | Moved Proximity vs. Time Graph directly BELOW the spectrogram (`drawExpectedMetroOverlay`), with Horizontal Top Max (`CLOSEST`) reference line and 4 Metro line curves (`FAR` $\rightarrow$ `CLOSEST` `◆` $\rightarrow$ `FAR`) painted live during recording and after stopping | DONE
 - 2026-11-09T22:12:15+01:00 | Replaced horizontal spectrogram overlay lines with 4 unobstructed Metro Line Proximity Time Bars in the header strip (`drawExpectedMetroOverlay`) showing far $\rightarrow$ closest (`◆` peak + ground delay $\Delta\tau$) $\rightarrow$ far | DONE
 - 2026-11-09T22:05:00+01:00 | Enlarged map panel height (`72vh`, `min-height: 560px`) with page scroll, added BCN surface elevation ($Z_{\text{surface}}$) + tunnel depths ($d_{\text{tunnel}}$) to `static/tmb_metro.geojson`, and switched closest-train ground delay $\Delta\tau$ to 3D slant distance (`estimateBcnOrographyAndDepth`) | DONE
 - 2026-11-09T22:00:15+01:00 | Made map observation pin (`obsMarker`) a draggable `🎯` target above all layers, wired click pass-through on GTFS lines/stations, fixed `refreshStaticExpectedTracksFromPoint` data keys, and bumped `?v=4` cache buster | DONE
