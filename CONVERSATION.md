@@ -1,6 +1,7 @@
 # Metro Doppler Hybrid Web App
 > **Target:** `metro-doppler` (main)
 
+- 2026-11-09T22:00:15+01:00 | Made map observation pin (`obsMarker`) a draggable `🎯` target above all layers, wired click pass-through on GTFS lines/stations, fixed `refreshStaticExpectedTracksFromPoint` data keys, and bumped `?v=4` cache buster | DONE
 - 2026-11-09T21:54:40+01:00 | Added interactive Map Observation Point (`setObservationPoint`), live closest-trains radar rays + telemetry (`updateClosestTrainsRadar`), and ground-delayed expected Metro Doppler signal region/curves (`drawExpectedMetroOverlay`, $\Delta\tau = d/c_{\text{ground}}$) on the spectrogram | DONE
 - 2026-11-09T21:46:35+01:00 | Generated `static/favicon.ico` and `static/favicon.png` (64x64/32x32/16x16) with cache-busting `?v=3` links so Chrome tab/sidebar icon updates immediately | DONE
 - 2026-11-09T21:44:20+01:00 | Added local untracked `.env` with TMB i-Metro credentials, added `/api/imetro` proxy in `server.py`, synced live TMB trains onto map in `static/app.js`, and added custom SVG favicon (`static/favicon.svg`) | DONE

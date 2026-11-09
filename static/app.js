@@ -953,31 +953,48 @@ function setObservationPoint(lat, lon, source = "map-click") {
     lon: Number(lon.toFixed(6)),
     source,
   };
-  APP_STATE.manualPointSelected = source === "map-click";
+  APP_STATE.manualPointSelected = source === "map-click" || source === "marker-drag";
 
   const coordsEl = document.getElementById("gps-coords");
   if (coordsEl) {
-    coordsEl.textContent = `${lat.toFixed(5)}, ${lon.toFixed(5)} (${source === "map-click" ? "Selected Point" : "GPS"})`;
+    coordsEl.textContent = `${lat.toFixed(5)}, ${lon.toFixed(5)} (${APP_STATE.manualPointSelected ? "Selected Point" : "GPS"})`;
   }
 
   if (mapInstance) {
     const latlng = [lat, lon];
     if (!obsMarker) {
-      obsMarker = window.L.circleMarker(latlng, {
-        radius: 8,
-        fillColor: "#facc15",
-        color: "#090d16",
-        weight: 2.5,
-        fillOpacity: 1.0,
+      const obsIcon = window.L.divIcon({
+        className: "obs-pin-icon",
+        html: `<div class="obs-pin-badge" title="Drag or click anywhere on map to move Observation Point">🎯</div>`,
+        iconSize: [0, 0],
+      });
+      obsMarker = window.L.marker(latlng, {
+        icon: obsIcon,
+        draggable: true,
+        zIndexOffset: 2500,
       })
         .addTo(mapInstance)
-        .bindPopup("🎯 Selected Acoustic Observation Point (Click map to move)");
+        .bindPopup("<strong>🎯 Acoustic Observation Point</strong><br/>Click anywhere on the map or drag this pin to move.");
+      obsMarker.on("drag", (ev) => {
+        const pos = ev.target.getLatLng();
+        setObservationPoint(pos.lat, pos.lng, "marker-drag");
+      });
+      obsMarker.on("dragend", (ev) => {
+        const pos = ev.target.getLatLng();
+        setObservationPoint(pos.lat, pos.lng, "marker-drag");
+      });
     } else {
       obsMarker.setLatLng(latlng);
     }
   }
 
   updateNearestStation(lat, lon);
+  lastRadarUpdatePerf = 0;
+  updateClosestTrainsRadar(performance.now());
+  if (!APP_STATE.isRecording && SPEC_VIEW.result) {
+    refreshStaticExpectedTracksFromPoint();
+    renderSpectrogramToCanvas(document.getElementById("hires-canvas"));
+  }
 }
 
 function haversineMeters(lat1, lon1, lat2, lon2) {
@@ -1052,6 +1069,11 @@ function renderGTFSGeoJSON(geojson) {
       }),
     onEachFeature: (feature, layer) => {
       const p = feature.properties || {};
+      layer.on("click", (ev) => {
+        if (ev && ev.latlng) {
+          setObservationPoint(ev.latlng.lat, ev.latlng.lng, "map-click");
+        }
+      });
       if (p.feature_type === "route" || p.route_short_name) {
         layer.bindPopup(
           `<strong>TMB Metro ${p.route_short_name || p.route_id}</strong><br/>${p.route_long_name || ""}`
@@ -2053,45 +2075,50 @@ async function simulateMetroPassBy() {
   document.getElementById("rec-samples").textContent = `(${N.toLocaleString()} samples)`;
 
   // Populate expected train track for the simulated pass-by + current closest map trains
-  const simPoints = [];
+  refreshStaticExpectedTracksFromPoint(duration);
+
+  await finalizeAudioAndComputeHighRes();
+}
+
+function refreshStaticExpectedTracksFromPoint(durationOverride = null) {
+  const duration = durationOverride || (SPEC_VIEW.result ? SPEC_VIEW.result.duration_sec : 6.0);
+  const v = 18.0, d0 = 4.5, t0 = duration / 2.0;
+  const simSamples = [];
   for (let t = 0; t <= duration; t += 0.1) {
     const xPos = v * (t - t0);
-    const dist = Math.sqrt(xPos * xPos + d0 * d0);
-    const radialVel = (v * xPos) / dist;
-    simPoints.push({
-      t_emit_sec: Number(t.toFixed(2)),
-      dist_m: Number(dist.toFixed(1)),
-      v_radial_mps: Number(radialVel.toFixed(2)),
+    const distM = Math.sqrt(xPos * xPos + d0 * d0);
+    const vRadialMps = (v * xPos) / distM;
+    simSamples.push({
+      tEmit: Number(t.toFixed(2)),
+      distM: Number(distM.toFixed(1)),
+      vRadialMps: Number(vRadialMps.toFixed(2)),
     });
   }
   APP_STATE.expectedTrainTracks = {
-    "SIM-L1": {
-      id: "SIM-L1",
+    SIM_L1: {
+      srvId: "SIM",
       lineName: "L1",
       color: "#ef4444",
-      dest: "Simulated Pass-By",
-      points: simPoints,
+      samples: simSamples,
     },
   };
   for (const tr of APP_STATE.closestTrainsSnapshot.slice(0, 2)) {
-    const pts = [];
-    for (let t = 0; t <= duration; t += 0.5) {
-      pts.push({
-        t_emit_sec: t,
-        dist_m: Math.max(10, Math.round(tr.dist_m + tr.v_radial_mps * t)),
-        v_radial_mps: tr.v_radial_mps,
+    const key = `${tr.lineName}_${tr.srvId}`;
+    const samples = [];
+    for (let t = 0; t <= duration; t += 0.25) {
+      samples.push({
+        tEmit: Number(t.toFixed(2)),
+        distM: Math.max(10, tr.distM + tr.vRadialMps * t),
+        vRadialMps: tr.vRadialMps,
       });
     }
-    APP_STATE.expectedTrainTracks[tr.id] = {
-      id: tr.id,
+    APP_STATE.expectedTrainTracks[key] = {
+      srvId: tr.srvId,
       lineName: tr.lineName,
       color: tr.color,
-      dest: tr.dest,
-      points: pts,
+      samples,
     };
   }
-
-  await finalizeAudioAndComputeHighRes();
 }
 
 async function downloadBundleZip() {

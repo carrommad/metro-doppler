@@ -483,6 +483,29 @@ body {
   border-radius: 6px;
   border: 1px solid #1e293b;
   background: #090d16;
+  cursor: crosshair;
+}
+
+.obs-pin-icon {
+  background: transparent;
+  border: none;
+}
+
+.obs-pin-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #facc15;
+  color: #090d16;
+  border: 2.5px solid #ffffff;
+  box-shadow: 0 0 12px rgba(250, 204, 21, 0.9);
+  font-size: 13px;
+  font-weight: 800;
+  transform: translate(-50%, -50%);
+  cursor: grab;
 }
 
 .osm-dark-tiles {
