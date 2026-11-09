@@ -1,0 +1,293 @@
+{
+  "type": "FeatureCollection",
+  "metadata": {
+    "source": "TMB Static GTFS (Transports Metropolitans de Barcelona)",
+    "agency_id": "TMB",
+    "agency_name": "Transports Metropolitans de Barcelona",
+    "lines": ["L1", "L2", "L3", "L4", "L5", "L9N", "L9S", "L10N", "L10S", "L11"]
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "route",
+        "route_id": "L1",
+        "route_short_name": "L1",
+        "route_long_name": "Hospital de Bellvitge - Fondo",
+        "route_color": "#E2231A"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [2.1072, 41.3446], [2.1165, 41.3514], [2.1288, 41.3608], [2.1389, 41.3695],
+          [2.1422, 41.3752], [2.1492, 41.3751], [2.1563, 41.3792], [2.1642, 41.3855],
+          [2.1700, 41.3870], [2.1746, 41.3891], [2.1802, 41.3911], [2.1868, 41.3958],
+          [2.1870, 41.4063], [2.1887, 41.4152], [2.1903, 41.4225], [2.1895, 41.4281],
+          [2.1904, 41.4357], [2.1972, 41.4422], [2.2095, 41.4468], [2.2182, 41.4516]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "route",
+        "route_id": "L2",
+        "route_short_name": "L2",
+        "route_long_name": "Paral·lel - Badalona Pompeu Fabra",
+        "route_color": "#9B3689"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [2.1685, 41.3750], [2.1631, 41.3794], [2.1642, 41.3855], [2.1674, 41.3917],
+          [2.1743, 41.3992], [2.1744, 41.4036], [2.1818, 41.4053], [2.1870, 41.4096],
+          [2.1965, 41.4148], [2.2045, 41.4215], [2.2130, 41.4285], [2.2268, 41.4368],
+          [2.2481, 41.4501]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "route",
+        "route_id": "L3",
+        "route_short_name": "L3",
+        "route_long_name": "Zona Universitària - Trinitat Nova",
+        "route_color": "#38A149"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [2.1119, 41.3843], [2.1225, 41.3872], [2.1318, 41.3860], [2.1402, 41.3791],
+          [2.1449, 41.3758], [2.1492, 41.3751], [2.1685, 41.3750], [2.1731, 41.3806],
+          [2.1700, 41.3870], [2.1674, 41.3917], [2.1587, 41.3976], [2.1502, 41.4018],
+          [2.1448, 41.4105], [2.1424, 41.4178], [2.1485, 41.4282], [2.1636, 41.4365],
+          [2.1725, 41.4421], [2.1852, 41.4488]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "route",
+        "route_id": "L4",
+        "route_short_name": "L4",
+        "route_long_name": "Trinitat Nova - La Pau",
+        "route_color": "#F9B000"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [2.1852, 41.4488], [2.1764, 41.4398], [2.1680, 41.4295], [2.1751, 41.4212],
+          [2.1656, 41.4119], [2.1669, 41.4024], [2.1674, 41.3917], [2.1746, 41.3891],
+          [2.1786, 41.3839], [2.1855, 41.3820], [2.1920, 41.3885], [2.1982, 41.3935],
+          [2.2054, 41.4008], [2.2128, 41.4079], [2.2179, 41.4136], [2.2045, 41.4215]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "route",
+        "route_id": "L5",
+        "route_short_name": "L5",
+        "route_long_name": "Cornellà Centre - Vall d'Hebron",
+        "route_color": "#0072BC"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [2.0706, 41.3582], [2.0912, 41.3665], [2.1180, 41.3758], [2.1292, 41.3755],
+          [2.1402, 41.3791], [2.1462, 41.3835], [2.1535, 41.3890], [2.1587, 41.3976],
+          [2.1669, 41.4024], [2.1744, 41.4036], [2.1746, 41.4116], [2.1822, 41.4182],
+          [2.1870, 41.4225], [2.1751, 41.4272], [2.1620, 41.4298], [2.1448, 41.4252]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "route",
+        "route_id": "L9N",
+        "route_short_name": "L9N",
+        "route_long_name": "La Sagrera - Can Zam",
+        "route_color": "#F58220"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [2.1870, 41.4225], [2.1945, 41.4292], [2.2028, 41.4375], [2.2095, 41.4468],
+          [2.2072, 41.4535], [2.1985, 41.4582]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "route",
+        "route_id": "L9S",
+        "route_short_name": "L9S",
+        "route_long_name": "Zona Universitària - Aeroport T1",
+        "route_color": "#F58220"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [2.1119, 41.3843], [2.1180, 41.3758], [2.1260, 41.3635], [2.1288, 41.3555],
+          [2.1125, 41.3392], [2.0895, 41.3250], [2.0620, 41.3035], [2.0732, 41.2889]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "route",
+        "route_id": "L10N",
+        "route_short_name": "L10N",
+        "route_long_name": "La Sagrera - Gorg",
+        "route_color": "#00A6E2"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [2.1870, 41.4225], [2.1945, 41.4292], [2.2055, 41.4335], [2.2185, 41.4368],
+          [2.2340, 41.4402]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "route",
+        "route_id": "L10S",
+        "route_short_name": "L10S",
+        "route_long_name": "Collblanc - ZAL | Riu Vell",
+        "route_color": "#00A6E2"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [2.1180, 41.3758], [2.1260, 41.3635], [2.1335, 41.3585], [2.1395, 41.3490],
+          [2.1380, 41.3320]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "route",
+        "route_id": "L11",
+        "route_short_name": "L11",
+        "route_long_name": "Trinitat Nova - Can Cuiàs",
+        "route_color": "#8FD400"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [2.1852, 41.4488], [2.1815, 41.4552], [2.1762, 41.4608], [2.1712, 41.4635]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "feature_type": "stop", "stop_id": "125", "stop_name": "Catalunya", "lines": ["L1", "L3"] },
+      "geometry": { "type": "Point", "coordinates": [2.1700, 41.3870] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "feature_type": "stop", "stop_id": "124", "stop_name": "Universitat", "lines": ["L1", "L2"] },
+      "geometry": { "type": "Point", "coordinates": [2.1642, 41.3855] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "feature_type": "stop", "stop_id": "121", "stop_name": "Espanya", "lines": ["L1", "L3"] },
+      "geometry": { "type": "Point", "coordinates": [2.1492, 41.3751] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "feature_type": "stop", "stop_id": "319", "stop_name": "Sants Estació", "lines": ["L3", "L5"] },
+      "geometry": { "type": "Point", "coordinates": [2.1402, 41.3791] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "feature_type": "stop", "stop_id": "324", "stop_name": "Passeig de Gràcia", "lines": ["L2", "L3", "L4"] },
+      "geometry": { "type": "Point", "coordinates": [2.1674, 41.3917] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "feature_type": "stop", "stop_id": "325", "stop_name": "Diagonal", "lines": ["L3", "L5"] },
+      "geometry": { "type": "Point", "coordinates": [2.1587, 41.3976] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "feature_type": "stop", "stop_id": "221", "stop_name": "Sagrada Família", "lines": ["L2", "L5"] },
+      "geometry": { "type": "Point", "coordinates": [2.1744, 41.4036] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "feature_type": "stop", "stop_id": "128", "stop_name": "Glòries", "lines": ["L1"] },
+      "geometry": { "type": "Point", "coordinates": [2.1870, 41.4063] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "feature_type": "stop", "stop_id": "131", "stop_name": "La Sagrera", "lines": ["L1", "L5", "L9N", "L10N"] },
+      "geometry": { "type": "Point", "coordinates": [2.1870, 41.4225] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "feature_type": "stop", "stop_id": "126", "stop_name": "Urquinaona", "lines": ["L1", "L4"] },
+      "geometry": { "type": "Point", "coordinates": [2.1746, 41.3891] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "feature_type": "stop", "stop_id": "215", "stop_name": "Paral·lel", "lines": ["L2", "L3"] },
+      "geometry": { "type": "Point", "coordinates": [2.1685, 41.3750] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "feature_type": "stop", "stop_id": "419", "stop_name": "Verdaguer", "lines": ["L4", "L5"] },
+      "geometry": { "type": "Point", "coordinates": [2.1669, 41.4024] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "feature_type": "stop", "stop_id": "515", "stop_name": "Collblanc", "lines": ["L5", "L9S", "L10S"] },
+      "geometry": { "type": "Point", "coordinates": [2.1180, 41.3758] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "feature_type": "stop", "stop_id": "312", "stop_name": "Zona Universitària", "lines": ["L3", "L9S"] },
+      "geometry": { "type": "Point", "coordinates": [2.1119, 41.3843] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "feature_type": "stop", "stop_id": "335", "stop_name": "Trinitat Nova", "lines": ["L3", "L4", "L11"] },
+      "geometry": { "type": "Point", "coordinates": [2.1852, 41.4488] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "feature_type": "stop", "stop_id": "224", "stop_name": "Clot", "lines": ["L1", "L2"] },
+      "geometry": { "type": "Point", "coordinates": [2.1870, 41.4096] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "feature_type": "stop", "stop_id": "424", "stop_name": "Barceloneta", "lines": ["L4"] },
+      "geometry": { "type": "Point", "coordinates": [2.1855, 41.3820] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "feature_type": "stop", "stop_id": "328", "stop_name": "Lesseps", "lines": ["L3"] },
+      "geometry": { "type": "Point", "coordinates": [2.1502, 41.4018] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "feature_type": "stop", "stop_id": "520", "stop_name": "Hospital Clínic", "lines": ["L5"] },
+      "geometry": { "type": "Point", "coordinates": [2.1535, 41.3890] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "feature_type": "stop", "stop_id": "127", "stop_name": "Arc de Triomf", "lines": ["L1"] },
+      "geometry": { "type": "Point", "coordinates": [2.1802, 41.3911] }
+    }
+  ]
+}
+
