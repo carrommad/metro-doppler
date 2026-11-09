@@ -706,48 +706,57 @@ function renderProximityGraphToCanvas() {
 
   // Auto-fit Y range (metres), closest at top, with 8% margin
   // Compute the continuous lower-envelope (minimum distance across ALL metros at any time t)
-  // Gather all unique timestamps across all tracks
-  const allTimesSet = new Set();
+  // Gather all unique arrival timestamps across all tracks, sorted chronologically
+  const allPoints = [];
   for (const tr of tracks) {
-    for (const p of tr.pts) allTimesSet.add(p.t);
+    for (const p of tr.pts) {
+      allPoints.push({ t: p.t, d: p.d, tr });
+    }
   }
-  const allTimes = Array.from(allTimesSet).sort((a, b) => a - b);
+  allPoints.sort((a, b) => a.t - b.t);
 
-  // For each timestamp, find the closest metro train
+  // Filter to keep only the minimum distance at each time slice
   const minEnvelope = [];
-  for (const t of allTimes) {
-    let bestDist = Infinity;
-    let bestTr = null;
-    for (const tr of tracks) {
-      if (tr.pts.length < 2) continue;
-      // Interpolate distance along this train's track at time t
-      if (t < tr.pts[0].t || t > tr.pts[tr.pts.length - 1].t) continue;
-      // Find segment
-      for (let i = 0; i < tr.pts.length - 1; i++) {
-        const p0 = tr.pts[i];
-        const p1 = tr.pts[i + 1];
-        if (t >= p0.t && t <= p1.t) {
-          const frac = (p1.t - p0.t) > 1e-5 ? (t - p0.t) / (p1.t - p0.t) : 0;
-          const dInterp = p0.d + frac * (p1.d - p0.d);
-          if (dInterp < bestDist) {
-            bestDist = dInterp;
-            bestTr = tr;
+  if (allPoints.length > 0) {
+    // Collect all points along the time axis
+    for (let i = 0; i < allPoints.length; i++) {
+      const curT = allPoints[i].t;
+      // Find the closest train among all tracks at curT
+      let minD = allPoints[i].d;
+      let minTr = allPoints[i].tr;
+      for (const tr of tracks) {
+        if (!tr.pts || tr.pts.length === 0) continue;
+        if (tr.pts.length === 1) {
+          if (tr.pts[0].d < minD) { minD = tr.pts[0].d; minTr = tr; }
+        } else {
+          // Linear interpolation if curT falls within this track's range
+          if (curT >= tr.pts[0].t && curT <= tr.pts[tr.pts.length - 1].t) {
+            for (let j = 0; j < tr.pts.length - 1; j++) {
+              const pA = tr.pts[j];
+              const pB = tr.pts[j + 1];
+              if (curT >= pA.t && curT <= pB.t) {
+                const dt = pB.t - pA.t;
+                const frac = dt > 1e-4 ? (curT - pA.t) / dt : 0;
+                const distAtT = pA.d + frac * (pB.d - pA.d);
+                if (distAtT < minD) {
+                  minD = distAtT;
+                  minTr = tr;
+                }
+                break;
+              }
+            }
+          } else {
+            // Find nearest endpoint distance
+            const nearestPt = curT < tr.pts[0].t ? tr.pts[0] : tr.pts[tr.pts.length - 1];
+            if (nearestPt.d < minD) {
+              minD = nearestPt.d;
+              minTr = tr;
+            }
           }
-          break;
         }
       }
+      minEnvelope.push({ t: curT, d: minD, tr: minTr });
     }
-    if (bestTr) {
-      minEnvelope.push({ t, d: bestDist, tr: bestTr });
-    }
-  }
-
-  // Fallback if sparse
-  if (minEnvelope.length === 0) {
-    for (const tr of tracks) {
-      for (const p of tr.pts) minEnvelope.push({ t: p.t, d: p.d, tr });
-    }
-    minEnvelope.sort((a, b) => a.t - b.t);
   }
 
   let dLo = Infinity, dHi = 0;
@@ -779,18 +788,25 @@ function renderProximityGraphToCanvas() {
   ctx.rect(padLeft, padTop, plotW, plotH);
   ctx.clip();
 
-  // Draw the single continuous minimum distance line for all metros
+  // Draw the single continuous minimum distance line across all metros
   if (minEnvelope.length >= 2) {
-    ctx.lineWidth = 2.8;
+    // Soft glow shadow underneath the line
+    ctx.shadowColor = "rgba(56, 189, 248, 0.4)";
+    ctx.shadowBlur = 8;
+    ctx.lineWidth = 3.2;
+
     for (let i = 0; i < minEnvelope.length - 1; i++) {
       const p0 = minEnvelope[i];
       const p1 = minEnvelope[i + 1];
-      ctx.strokeStyle = p0.tr.color || "#38bdf8";
+      // Color dynamically follows the closest metro line at that moment
+      ctx.strokeStyle = p0.tr && p0.tr.color ? p0.tr.color : "#38bdf8";
       ctx.beginPath();
       ctx.moveTo(toX(p0.t), toY(p0.d));
       ctx.lineTo(toX(p1.t), toY(p1.d));
       ctx.stroke();
     }
+    ctx.shadowColor = "transparent";
+    ctx.shadowBlur = 0;
   }
 
   // Identify local minima or closest points on this minimum envelope
@@ -800,17 +816,12 @@ function renderProximityGraphToCanvas() {
   }
 
   // Draw colored circle with the color of the metro line at the closest approaches
-  // (Both global minimum and each train's cpa if it touches the min envelope)
   const drawnPoints = [];
   for (const tr of tracks) {
     const cx = toX(tr.cpa.t);
     const cy = toY(tr.cpa.d);
     const color = tr.color || "#38bdf8";
-
-    // Only draw circle if close to the envelope or the closest moment
-    if (Math.abs(tr.cpa.d - globalMinPt.d) < (dHi - dLo) * 0.45) {
-      drawnPoints.push({ cx, cy, color, tr });
-    }
+    drawnPoints.push({ cx, cy, color, tr });
   }
   if (drawnPoints.length === 0 && globalMinPt) {
     drawnPoints.push({
@@ -858,19 +869,42 @@ function renderProximityGraphToCanvas() {
   }
   ctx.restore();
 
-  // Legend (top-right, inside plot)
-  ctx.font = "600 10.5px monospace";
-  const rows = tracks.map((tr) => `${tr.lineName}#${tr.srvId} · min ${Math.round(tr.cpa.d)} m · Δτ ${(tr.cpa.delay * 1000).toFixed(0)} ms`);
-  const lw = Math.max(...rows.map((r) => ctx.measureText(r).width)) + 26;
-  const lx = padLeft + plotW - lw - 6, ly = padTop + 6;
-  ctx.fillStyle = "rgba(9, 13, 22, 0.88)";
-  ctx.fillRect(lx, ly, lw, rows.length * 15 + 6);
+  // Legend (top-right, inside plot) showing live distances and colors
+  ctx.font = "600 11px monospace";
+  const rows = tracks.map((tr) => {
+    // Current live distance from snapshot or latest sample
+    const snap = APP_STATE.closestTrainsSnapshot.find((c) => c.srvId === tr.srvId && c.lineName === tr.lineName);
+    const liveDist = snap ? Math.round(snap.distM) : Math.round(tr.pts[tr.pts.length - 1].d);
+    const liveDelay = snap ? Math.round(snap.groundDelaySec * 1000) : Math.round(tr.cpa.delay * 1000);
+    return {
+      text: `${tr.lineName}#${tr.srvId} · live ${liveDist}m (min ${Math.round(tr.cpa.d)}m) · Δτ ${liveDelay}ms`,
+      color: tr.color || "#38bdf8",
+    };
+  });
+
+  const lw = Math.max(...rows.map((r) => ctx.measureText(r.text).width)) + 32;
+  const lx = padLeft + plotW - lw - 8, ly = padTop + 8;
+  const boxHeight = rows.length * 18 + 8;
+
+  // Legend background with border
+  ctx.fillStyle = "rgba(9, 13, 22, 0.92)";
+  ctx.fillRect(lx, ly, lw, boxHeight);
+  ctx.strokeStyle = "#1e293b";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(lx, ly, lw, boxHeight);
+
   ctx.textAlign = "left";
   rows.forEach((r, i) => {
-    ctx.fillStyle = tracks[i].color || "#38bdf8";
-    ctx.fillRect(lx + 6, ly + 8 + i * 15, 10, 3);
-    ctx.fillStyle = "#e2e8f0";
-    ctx.fillText(r, lx + 20, ly + 14 + i * 15);
+    const itemY = ly + 14 + i * 18;
+
+    // Small colored dot indicator for the metro line
+    ctx.fillStyle = r.color;
+    ctx.beginPath();
+    ctx.arc(lx + 12, itemY - 3.5, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#f1f5f9";
+    ctx.fillText(r.text, lx + 24, itemY);
   });
 }
 
