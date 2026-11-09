@@ -434,7 +434,7 @@ const SPEC_VIEW = {
   measureP1: null, // { t, f }
   measureP2: null, // { t, f }
   hoverPt: null,   // { t, f, db, x, y }
-  pad: { left: 68, right: 84, top: 34, bottom: 40 },
+  pad: { left: 68, right: 84, top: 88, bottom: 40 },
 };
 
 function sampleBilinearDb(sxxDb, numFrames, numBins, fFrame, fBin) {
@@ -597,92 +597,122 @@ function renderSpectrogramToCanvas(canvas, result) {
 }
 
 /**
- * Draws the expected Doppler signal band & trajectory from the closest moving Metro trains,
- * shifted in time by ground acoustic propagation delay Δτ = distance / c_ground
- * and in frequency by Doppler shift f_obs = f0 / (1 + v_radial / c_ground).
+ * Draws 3-4 horizontal Metro Line Proximity Time Bars in the header strip ABOVE the spectrogram
+ * (leaving the spectrogram image 100% unobstructed). Each bar shows the train's ground-delayed
+ * arrival window (t_obs = t_emit + d_3D / c_ground) ramping from FAR -> CLOSEST (◆ peak) -> FAR.
  */
 function drawExpectedMetroOverlay(ctx, padLeft, padTop, plotW, plotH) {
   if (!APP_STATE.showExpectedOverlay) return;
-  const tracks = Object.values(APP_STATE.expectedTrainTracks || {});
+  const tracks = Object.values(APP_STATE.expectedTrainTracks || {}).slice(0, 4);
   if (tracks.length === 0) return;
 
-  const { tMin, tMax, fMin, fMax } = SPEC_VIEW;
+  const { tMin, tMax } = SPEC_VIEW;
   const cGround = Math.max(200, parseFloat(document.getElementById("input-c-ground")?.value) || 1500);
-  const f0Base = Math.max(40, parseFloat(document.getElementById("input-f0-train")?.value) || 440);
-  const harmonics = [0.5, 1.0, 2.0, 3.0];
-
   const toX = (t) => padLeft + ((t - tMin) / Math.max(1e-6, tMax - tMin)) * plotW;
-  const toY = (f) => padTop + plotH - ((f - fMin) / Math.max(1e-6, fMax - fMin)) * plotH;
+
+  const stripTop = 27;
+  const laneH = 14;
 
   ctx.save();
-  ctx.beginPath();
-  ctx.rect(padLeft, padTop, plotW, plotH);
-  ctx.clip();
-
-  for (const tr of tracks) {
+  for (let idx = 0; idx < tracks.length; idx++) {
+    const tr = tracks[idx];
     const samples = tr.samples;
     if (!samples || samples.length < 2) continue;
 
-    for (const hMult of harmonics) {
-      const fHarm = f0Base * hMult;
-      const isPrimary = hMult === 1.0;
+    const laneY = stripTop + idx * laneH + laneH * 0.5;
+    const color = tr.color || "#38bdf8";
 
-      // Shaded expected signal region (band width proportional to proximity 1/dist)
-      ctx.beginPath();
-      const upperPts = [];
-      const lowerPts = [];
+    // Left line badge (outside plot on the left)
+    ctx.font = "700 10px monospace";
+    ctx.fillStyle = color;
+    ctx.textAlign = "right";
+    ctx.fillText(`${tr.lineName}#${tr.srvId}`, padLeft - 6, laneY + 3.5);
 
-      for (let i = 0; i < samples.length; i++) {
-        const s = samples[i];
-        const delaySec = s.distM / cGround;
-        const tArrival = s.tEmit + delaySec;
-        const fShift = fHarm / (1.0 + s.vRadialMps / cGround);
-        // Stronger/wider expected signal zone when train is closer (< 600 m)
-        const proximity = Math.max(0.15, Math.min(1.0, 250.0 / Math.max(50.0, s.distM)));
-        const bandHz = (isPrimary ? 48 : 26) * proximity;
-        upperPts.push({ x: toX(tArrival), y: toY(fShift + bandHz), fShift, tArrival, delaySec, distM: s.distM });
-        lowerPts.push({ x: toX(tArrival), y: toY(Math.max(0, fShift - bandHz)) });
-      }
+    // Subtle background track rail
+    ctx.fillStyle = "rgba(30, 41, 59, 0.65)";
+    ctx.fillRect(padLeft, laneY - 4.5, plotW, 9);
 
-      ctx.moveTo(upperPts[0].x, upperPts[0].y);
-      for (let i = 1; i < upperPts.length; i++) ctx.lineTo(upperPts[i].x, upperPts[i].y);
-      for (let i = lowerPts.length - 1; i >= 0; i--) ctx.lineTo(lowerPts[i].x, lowerPts[i].y);
-      ctx.closePath();
-      ctx.fillStyle = isPrimary ? "rgba(56, 189, 248, 0.18)" : "rgba(56, 189, 248, 0.08)";
-      ctx.fill();
-
-      // Center expected Doppler line
-      ctx.beginPath();
-      for (let i = 0; i < upperPts.length; i++) {
-        const yCenter = (upperPts[i].y + lowerPts[i].y) * 0.5;
-        if (i === 0) ctx.moveTo(upperPts[i].x, yCenter);
-        else ctx.lineTo(upperPts[i].x, yCenter);
-      }
-      ctx.strokeStyle = isPrimary ? (tr.color || "#38bdf8") : "rgba(147, 197, 253, 0.55)";
-      ctx.lineWidth = isPrimary ? 2.2 : 1.2;
-      ctx.setLineDash(isPrimary ? [] : [5, 4]);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      // Label primary harmonic with train ID, distance & ground delay Δτ
-      if (isPrimary && upperPts.length > 0) {
-        const last = upperPts[upperPts.length - 1];
-        const yCenter = (last.y + lowerPts[lowerPts.length - 1].y) * 0.5;
-        const lbl = `🚇 ${tr.lineName} #${tr.srvId} (${Math.round(last.distM)}m, Δτ=${(last.delaySec * 1000).toFixed(0)}ms)`;
-        ctx.font = "600 10.5px monospace";
-        const tw = ctx.measureText(lbl).width + 10;
-        const lx = Math.max(padLeft + 6, Math.min(padLeft + plotW - tw - 6, last.x - tw - 4));
-        const ly = Math.max(padTop + 16, Math.min(padTop + plotH - 8, yCenter - 6));
-        ctx.fillStyle = "rgba(9, 13, 22, 0.88)";
-        ctx.fillRect(lx, ly - 12, tw, 17);
-        ctx.strokeStyle = tr.color || "#38bdf8";
-        ctx.lineWidth = 1;
-        ctx.strokeRect(lx, ly - 12, tw, 17);
-        ctx.fillStyle = "#f8fafc";
-        ctx.textAlign = "left";
-        ctx.fillText(lbl, lx + 5, ly);
-      }
+    // Compute ground-delayed arrival points and find minimum 3D distance (Closest Point of Approach)
+    let minD = Infinity;
+    let maxD = 0;
+    const pts = [];
+    for (let i = 0; i < samples.length; i++) {
+      const s = samples[i];
+      const delaySec = s.distM / cGround;
+      const tArrival = s.tEmit + delaySec;
+      const x = toX(tArrival);
+      if (s.distM < minD) minD = s.distM;
+      if (s.distM > maxD) maxD = s.distM;
+      pts.push({ x, tArrival, distM: s.distM, delaySec, vRadialMps: s.vRadialMps });
     }
+
+    let cpaPt = pts[0];
+    for (const p of pts) {
+      if (p.distM <= cpaPt.distM) cpaPt = p;
+    }
+
+    // Clip to horizontal plot bounds for the time bar segments
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(padLeft, laneY - 7, plotW, 14);
+    ctx.clip();
+
+    const dSpan = Math.max(25.0, maxD - minD);
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[i];
+      const p1 = pts[i + 1];
+      const x0 = Math.min(p0.x, p1.x);
+      const segW = Math.max(1.5, Math.abs(p1.x - p0.x) + 0.8);
+      if (x0 + segW < padLeft || x0 > padLeft + plotW) continue;
+
+      const avgD = 0.5 * (p0.distM + p1.distM);
+      // Proximity weight: 0.0 (far) -> 1.0 (closest to observation point)
+      const relProx = 1.0 - Math.min(1.0, (avgD - minD) / dSpan);
+      const absProx = Math.max(0.18, Math.min(1.0, 260.0 / Math.max(60.0, avgD)));
+      const intensity = 0.25 + 0.75 * (0.65 * relProx + 0.35 * absProx);
+      const barH = 2.0 + 7.5 * (0.65 * relProx + 0.35 * absProx);
+
+      ctx.globalAlpha = Math.min(1.0, intensity);
+      ctx.fillStyle = color;
+      ctx.fillRect(x0, laneY - barH * 0.5, segW, barH);
+    }
+
+    // Draw Closest Point of Approach (CPA) diamond marker ◆ + far->closest->far arrows
+    ctx.globalAlpha = 1.0;
+    if (cpaPt.x >= padLeft && cpaPt.x <= padLeft + plotW) {
+      // Subtle vertical tick at top border of spectrogram
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(cpaPt.x, laneY + 5);
+      ctx.lineTo(cpaPt.x, padTop + 6);
+      ctx.stroke();
+
+      // Bright white/colored ◆ peak marker at closest point
+      ctx.fillStyle = "#ffffff";
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cpaPt.x, laneY - 5.5);
+      ctx.lineTo(cpaPt.x + 5.5, laneY);
+      ctx.lineTo(cpaPt.x, laneY + 5.5);
+      ctx.lineTo(cpaPt.x - 5.5, laneY);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Compact readout next to the ◆ peak marker
+      const tag = `min ${Math.round(cpaPt.distM)}m (Δτ=${(cpaPt.delaySec * 1000).toFixed(0)}ms)`;
+      ctx.font = "600 9.5px monospace";
+      const tw = ctx.measureText(tag).width;
+      const tx = cpaPt.x + 8 + tw < padLeft + plotW - 4 ? cpaPt.x + 8 : cpaPt.x - tw - 8;
+      ctx.fillStyle = "rgba(9, 13, 22, 0.85)";
+      ctx.fillRect(tx - 2, laneY - 5.5, tw + 4, 11);
+      ctx.fillStyle = "#f8fafc";
+      ctx.textAlign = "left";
+      ctx.fillText(tag, tx, laneY + 3);
+    }
+    ctx.restore();
   }
   ctx.restore();
 }
@@ -1346,10 +1376,10 @@ function updateClosestTrainsRadar(now) {
   }
 
   ranked.sort((a, b) => a.distM - b.distM);
-  const closest = ranked.slice(0, 3);
+  const closest = ranked.slice(0, 4);
   APP_STATE.closestTrainsSnapshot = closest;
 
-  // Draw dashed ground-propagation rays from selected observation point to the 3 closest trains
+  // Draw dashed ground-propagation rays from selected observation point to the 4 closest trains
   if (radarLayerGroup) {
     radarLayerGroup.clearLayers();
     for (let i = 0; i < closest.length; i++) {
@@ -1380,10 +1410,10 @@ function updateClosestTrainsRadar(now) {
       .join(" · ");
   }
 
-  // Log kinematics during recording for the spectrogram expected-signal region overlay
+  // Log kinematics during recording for the 4 Metro Line Proximity Time Bars above the spectrogram
   if (APP_STATE.isRecording) {
     const tEmit = (performance.now() - APP_STATE.recordingStartPerf) / 1000.0;
-    for (const c of closest.slice(0, 2)) {
+    for (const c of closest.slice(0, 4)) {
       const key = `${c.lineName}_${c.srvId}`;
       if (!APP_STATE.expectedTrainTracks[key]) {
         APP_STATE.expectedTrainTracks[key] = {
@@ -2150,14 +2180,21 @@ function refreshStaticExpectedTracksFromPoint(durationOverride = null) {
       samples: simSamples,
     },
   };
-  for (const tr of APP_STATE.closestTrainsSnapshot.slice(0, 2)) {
+  for (let i = 0; i < Math.min(3, APP_STATE.closestTrainsSnapshot.length); i++) {
+    const tr = APP_STATE.closestTrainsSnapshot[i];
     const key = `${tr.lineName}_${tr.srvId}`;
     const samples = [];
-    for (let t = 0; t <= duration; t += 0.25) {
+    // Simulate closest approach pass-by around t_peak for each nearby train
+    const tPeak = duration * (0.25 + i * 0.25);
+    const dMin = Math.max(18.0, tr.distM * 0.65);
+    const vTrain = 17.5;
+    for (let t = 0; t <= duration; t += 0.12) {
+      const along = vTrain * (t - tPeak);
+      const dInst = Math.hypot(along, dMin);
       samples.push({
         tEmit: Number(t.toFixed(2)),
-        distM: Math.max(10, tr.distM + tr.vRadialMps * t),
-        vRadialMps: tr.vRadialMps,
+        distM: Number(dInst.toFixed(1)),
+        vRadialMps: Number(((vTrain * along) / dInst).toFixed(2)),
       });
     }
     APP_STATE.expectedTrainTracks[key] = {
