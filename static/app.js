@@ -456,12 +456,13 @@ function sampleBilinearDb(sxxDb, numFrames, numBins, fFrame, fBin) {
 function setSpectrogramData(canvas, result) {
   SPEC_VIEW.result = result;
   const rollSec = parseFloat(document.getElementById("select-rolling-window")?.value) || 20.0;
-  if (APP_STATE.isRecording && rollSec > 0 && result.duration_sec > rollSec) {
-    SPEC_VIEW.tMin = result.duration_sec - rollSec;
-    SPEC_VIEW.tMax = result.duration_sec;
+  const totalT = (result.tOffset || 0) + result.duration_sec;
+  if (APP_STATE.isRecording && rollSec > 0 && totalT > rollSec) {
+    SPEC_VIEW.tMin = totalT - rollSec;
+    SPEC_VIEW.tMax = totalT;
   } else {
-    SPEC_VIEW.tMin = 0;
-    SPEC_VIEW.tMax = Math.max(0.01, result.duration_sec);
+    SPEC_VIEW.tMin = result.tOffset || 0;
+    SPEC_VIEW.tMax = Math.max(SPEC_VIEW.tMin + 0.01, totalT);
   }
   SPEC_VIEW.fMin = 0;
   SPEC_VIEW.fMax = Math.max(10, result.fmax_hz);
@@ -553,7 +554,9 @@ function renderSpectrogramToCanvas(canvas, result) {
     for (let px = 0; px < renderW; px++) {
       const tFrac = px / Math.max(1, renderW - 1);
       const timeSec = tMin + tFrac * (tMax - tMin);
-      const fFrame = (timeSec / Math.max(1e-6, totalDur)) * (numFrames - 1);
+      // Map timeSec into sxxDb frame index; for rolling windows, sxxDb covers [tMax - totalDur, tMax]
+      const tOffset = result.tOffset || 0;
+      const fFrame = ((timeSec - tOffset) / Math.max(1e-6, totalDur)) * (numFrames - 1);
 
       let db;
       if (smooth) {
@@ -1871,6 +1874,7 @@ const LIVE_STFT = {
   sampleRate: 48000,
   freqResolutionHz: 0,
   timeStepSec: 0,
+  totalFramesCount: 0,
   dirty: false,
 };
 
@@ -1890,6 +1894,7 @@ function initParallelWorker() {
       LIVE_STFT.freqResolutionHz = msg.freqResolutionHz;
       LIVE_STFT.timeStepSec = msg.timeStepSec;
       LIVE_STFT.columns = [];
+      LIVE_STFT.totalFramesCount = 0;
       LIVE_STFT.peakFreqs = [];
       LIVE_STFT.dirty = false;
     } else if (msg.type === "frames") {
@@ -1897,6 +1902,7 @@ function initParallelWorker() {
       for (let i = 0; i < numNewFrames; i++) {
         LIVE_STFT.columns.push(flatDb.slice(i * plottedBins, (i + 1) * plottedBins));
       }
+      LIVE_STFT.totalFramesCount += numNewFrames;
       if (framePeaks) {
         for (const p of framePeaks) {
           if (LIVE_STFT.peakFreqs.length < 500) LIVE_STFT.peakFreqs.push(p);
@@ -1946,6 +1952,7 @@ function flushLiveHighResSpectrogram() {
     nyquist_hz: LIVE_STFT.sampleRate / 2,
     num_samples: numFrames * LIVE_STFT.step + LIVE_STFT.noverlap,
     duration_sec: durationSec,
+    tOffset: Math.max(0, Number(((LIVE_STFT.totalFramesCount - numFrames) * LIVE_STFT.timeStepSec).toFixed(4))),
     freq_resolution_hz: LIVE_STFT.freqResolutionHz,
     time_step_sec: LIVE_STFT.timeStepSec,
     time_bins: numFrames,

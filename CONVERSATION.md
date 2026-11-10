@@ -1,6 +1,8 @@
 # Metro Doppler Hybrid Web App
 > **Target:** `metro-doppler` (main)
 
+- 2026-11-10T11:15:00+01:00 | Fixed rolling window frame offset calculation in high-res canvas renderer: properly mapped tOffset so the live spectrogram actively updates and rolls without freezing | DONE
+
 - 2026-11-10T11:03:30+01:00 | Further enlarged panel box headers (16px bold uppercase), minimize buttons (34x30px), and enlarged action buttons (15px bold, 12px 24px padding) | DONE
 
 - 2026-11-10T11:00:00+01:00 | Redesigned UI for high intuition & minimalism: larger action buttons, bigger panel headers, decluttered topbar and footers, and collapsed advanced STFT settings into a clean details accordion | DONE
