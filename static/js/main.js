@@ -116,7 +116,12 @@ window.addEventListener("DOMContentLoaded", () => {
 
   const btnSynth = document.getElementById("btn-synth");
   if (btnSynth) {
-    btnSynth.addEventListener("click", () => simulateMetroPassBy());
+    btnSynth.addEventListener("click", () => {
+      simulateMetroPassBy().catch((err) => {
+        console.error("Simulation error:", err);
+        showDspAlert(`Simulation Error: ${err.message}`);
+      });
+    });
   }
 
   const btnRecompute = document.getElementById("btn-recompute");

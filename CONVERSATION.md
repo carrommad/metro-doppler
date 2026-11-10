@@ -1,6 +1,8 @@
 # Metro Doppler Hybrid Web App
 > **Target:** `metro-doppler` (main)
 
+- 2026-11-10T15:19:00+01:00 | Fixed simulate button execution: added null-guards for retired DOM elements (hires-spec-meta, hires-engine-tag) in computeHighResSpectrogram and added AudioContext fallback + try-catch error boundary | DONE
+
 - 2026-11-10T11:51:30+01:00 | Optimized live rolling canvas renderer for 60 FPS smoothness: persistent offscreen canvas caching, precomputed frequency/time lookup arrays, and inverted loop order to eliminate GC churn and per-pixel math | DONE
 
 - 2026-11-10T11:43:00+01:00 | Fixed rolling window live view: initialized viewport to fixed rollSec window [0, rollSec] during live capture and blanked unrecorded future pixels so spectrogram visibly streams and rolls from left to right | DONE

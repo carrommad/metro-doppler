@@ -578,7 +578,7 @@ export async function computeHighResSpectrogram() {
   const metaEl = document.getElementById("hires-spec-meta");
   const tagEl = document.getElementById("hires-engine-tag");
 
-  metaEl.textContent = `Computing high-resolution spectrogram (${engine})…`;
+  if (metaEl) metaEl.textContent = `Computing high-resolution spectrogram (${engine})…`;
 
   if (engine === "scipy") {
     try {
@@ -622,17 +622,19 @@ export async function computeHighResSpectrogram() {
 
       APP_STATE.spectrogramMeta = data;
       if (hiresImg) hiresImg.classList.add("hidden");
-      hiresCanvas.classList.remove("hidden");
+      if (hiresCanvas) hiresCanvas.classList.remove("hidden");
       setSpectrogramData(hiresCanvas, data);
 
       if (tagEl) tagEl.textContent = `scipy.signal • Hann ${data.parameters.nperseg}/${data.parameters.noverlap}`;
-      metaEl.textContent =
-        `fs=${data.sample_rate_hz} Hz | Δf=${data.freq_resolution_hz} Hz | Δt=${(data.time_step_sec * 1000).toFixed(2)} ms | ` +
-        `Grid: ${data.time_bins}×${data.freq_bins}`;
+      if (metaEl) {
+        metaEl.textContent =
+          `fs=${data.sample_rate_hz} Hz | Δf=${data.freq_resolution_hz} Hz | Δt=${(data.time_step_sec * 1000).toFixed(2)} ms | ` +
+          `Grid: ${data.time_bins}×${data.freq_bins}`;
+      }
       return;
     } catch (err) {
       console.warn("Python scipy service failed or unreachable, falling back to in-browser fft.js:", err);
-      metaEl.textContent = `Python service error (${err.message}); falling back to in-browser fft.js…`;
+      if (metaEl) metaEl.textContent = `Python service error (${err.message}); falling back to in-browser fft.js…`;
     }
   }
 
@@ -640,16 +642,20 @@ export async function computeHighResSpectrogram() {
   APP_STATE.spectrogramMeta = res;
 
   if (hiresImg) hiresImg.classList.add("hidden");
-  hiresCanvas.classList.remove("hidden");
+  if (hiresCanvas) hiresCanvas.classList.remove("hidden");
   setSpectrogramData(hiresCanvas, res);
 
-  const pngBlob = await new Promise((resolve) => hiresCanvas.toBlob(resolve, "image/png"));
+  const pngBlob = hiresCanvas
+    ? await new Promise((resolve) => hiresCanvas.toBlob(resolve, "image/png"))
+    : null;
   APP_STATE.spectrogramPngBlob = pngBlob;
 
   if (tagEl) tagEl.textContent = `fft.js • Hann ${res.parameters.nperseg}/${res.parameters.noverlap}`;
-  metaEl.textContent =
-    `fs=${res.sample_rate_hz} Hz | Δf=${res.freq_resolution_hz} Hz | Δt=${(res.time_step_sec * 1000).toFixed(2)} ms | ` +
-    `Grid: ${res.time_bins}×${res.freq_bins}`;
+  if (metaEl) {
+    metaEl.textContent =
+      `fs=${res.sample_rate_hz} Hz | Δf=${res.freq_resolution_hz} Hz | Δt=${(res.time_step_sec * 1000).toFixed(2)} ms | ` +
+      `Grid: ${res.time_bins}×${res.freq_bins}`;
+  }
 }
 
 export function refreshStaticExpectedTracksFromPoint(durationOverride = null) {
@@ -677,10 +683,19 @@ export function refreshStaticExpectedTracksFromPoint(durationOverride = null) {
 }
 
 export async function simulateMetroPassBy() {
-  const AudioCtx = window.AudioContext || window.webkitAudioContext;
-  const tempCtx = new AudioCtx();
-  const fs = tempCtx.sampleRate;
-  await tempCtx.close();
+  let fs = 44100;
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (AudioCtx) {
+      const tempCtx = new AudioCtx();
+      if (tempCtx.sampleRate && tempCtx.sampleRate > 0) {
+        fs = tempCtx.sampleRate;
+      }
+      await tempCtx.close().catch(() => {});
+    }
+  } catch (e) {
+    console.warn("Could not query AudioContext sampleRate, defaulting to 44100 Hz:", e);
+  }
 
   APP_STATE.sampleRate = fs;
   APP_STATE.dspVerifiedOff = true;
