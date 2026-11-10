@@ -226,12 +226,12 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
   font-family: var(--sans);
-  font-size: 12px;
+  font-size: 13.5px;
   font-weight: 600;
-  padding: 6px 12px;
-  border-radius: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
   border: 1px solid transparent;
   cursor: pointer;
   transition: all 0.14s ease;
@@ -266,9 +266,9 @@ body {
   border-color: #475569;
 }
 
-.btn-sm { padding: 6px 12px; font-size: 12px; }
-.btn-xs { padding: 4px 10px; font-size: 11px; border-radius: 5px; }
-.btn-lg { padding: 9px 18px; font-size: 13.5px; font-weight: 700; border-radius: 7px; }
+.btn-sm { padding: 8px 14px; font-size: 13px; font-weight: 600; border-radius: 6px; }
+.btn-xs { padding: 6px 12px; font-size: 12px; border-radius: 6px; }
+.btn-lg { padding: 12px 24px; font-size: 15px; font-weight: 700; border-radius: 8px; }
 
 .settings-accordion {
   background: #080b12;
@@ -601,12 +601,12 @@ body {
 }
 
 /* Minimize / restore for every panel box */
-.resizable-panel { padding-top: 36px; }
+.resizable-panel { padding-top: 48px; }
 .panel-minbar {
   position: absolute;
-  top: 8px;
-  left: 16px;
-  right: 12px;
+  top: 10px;
+  left: 18px;
+  right: 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -614,31 +614,32 @@ body {
   pointer-events: none;
 }
 .panel-minbar-title {
-  font-size: 13.5px;
-  font-weight: 700;
-  color: #f1f5f9;
+  font-size: 16px;
+  font-weight: 800;
+  color: #ffffff;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
 }
 .panel-min-btn {
   pointer-events: auto;
   background: #0f172a;
-  border: 1px solid #334155;
+  border: 1.5px solid #475569;
   color: var(--text);
-  border-radius: 6px;
-  width: 28px;
-  height: 24px;
-  line-height: 20px;
-  font-size: 15px;
-  font-weight: bold;
+  border-radius: 8px;
+  width: 34px;
+  height: 30px;
+  line-height: 24px;
+  font-size: 18px;
+  font-weight: 900;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: all 0.15s ease;
 }
-.panel-min-btn:hover { background: #1e293b; }
+.panel-min-btn:hover { background: #1e293b; border-color: #38bdf8; color: #38bdf8; }
 .resizable-panel.minimized {
-  height: 34px !important;
+  height: 44px !important;
   min-height: 0 !important;
   resize: none;
   padding-bottom: 0;
