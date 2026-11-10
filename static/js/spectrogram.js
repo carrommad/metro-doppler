@@ -6,6 +6,10 @@ import { drawExpectedMetroOverlay, renderProximityGraphToCanvas } from "./proxim
 /**
  * Bilinear sampling in dB space for smooth zooming on spectrogram
  */
+let cachedOffCanvas = null;
+let cachedOffCtx = null;
+let cachedImgData = null;
+
 export function sampleBilinearDb(sxxDb, numFrames, numBins, fFrame, fBin) {
   const x0 = Math.max(0, Math.min(numFrames - 1, Math.floor(fFrame)));
   const x1 = Math.max(0, Math.min(numFrames - 1, x0 + 1));
@@ -109,43 +113,62 @@ export function renderSpectrogramToCanvas(canvas, result) {
   const fMin = SPEC_VIEW.fMin;
   const fMax = SPEC_VIEW.fMax;
 
-  const renderW = Math.min(plotW, 900);
-  const renderH = Math.min(plotH, 360);
-  const offCanvas = document.createElement("canvas");
-  offCanvas.width = renderW;
-  offCanvas.height = renderH;
-  const offCtx = offCanvas.getContext("2d");
-  const imgData = offCtx.createImageData(renderW, renderH);
+  const renderW = Math.min(plotW, APP_STATE.isRecording ? 640 : 900);
+  const renderH = Math.min(plotH, APP_STATE.isRecording ? 256 : 360);
+
+  if (!cachedOffCanvas || cachedOffCanvas.width !== renderW || cachedOffCanvas.height !== renderH) {
+    cachedOffCanvas = document.createElement("canvas");
+    cachedOffCanvas.width = renderW;
+    cachedOffCanvas.height = renderH;
+    cachedOffCtx = cachedOffCanvas.getContext("2d");
+    cachedImgData = cachedOffCtx.createImageData(renderW, renderH);
+  }
+  const offCanvas = cachedOffCanvas;
+  const offCtx = cachedOffCtx;
+  const imgData = cachedImgData;
   const pixels = imgData.data;
   const smooth = SPEC_VIEW.smooth;
 
+  // Precompute Y -> freqBin lookup
+  const fBinLookup = new Float32Array(renderH);
   for (let py = 0; py < renderH; py++) {
     const fFrac = 1.0 - py / Math.max(1, renderH - 1);
     const freqHz = fMin + fFrac * (fMax - fMin);
-    const fBin = (freqHz / Math.max(1e-6, totalFmax)) * (numBins - 1);
+    fBinLookup[py] = (freqHz / Math.max(1e-6, totalFmax)) * (numBins - 1);
+  }
 
-    for (let px = 0; px < renderW; px++) {
-      const tFrac = px / Math.max(1, renderW - 1);
-      const timeSec = tMin + tFrac * (tMax - tMin);
-      const tOffset = result.tOffset || 0;
-      const pIdx = (py * renderW + px) * 4;
+  // Precompute X -> timeSec & valid check
+  const tOffset = result.tOffset || 0;
+  const tSpan = Math.max(1e-6, tMax - tMin);
+  const durSpan = Math.max(1e-6, totalDur);
 
-      // In live recording mode before full window is filled, leave future time unpainted (dark background)
-      if (APP_STATE.isRecording && (timeSec < tOffset || timeSec > tOffset + totalDur + 0.05)) {
+  for (let px = 0; px < renderW; px++) {
+    const tFrac = px / Math.max(1, renderW - 1);
+    const timeSec = tMin + tFrac * tSpan;
+
+    if (APP_STATE.isRecording && (timeSec < tOffset || timeSec > tOffset + totalDur + 0.05)) {
+      // Future/blank column
+      for (let py = 0; py < renderH; py++) {
+        const pIdx = (py * renderW + px) * 4;
         pixels[pIdx + 0] = 7;
         pixels[pIdx + 1] = 11;
         pixels[pIdx + 2] = 18;
         pixels[pIdx + 3] = 255;
-        continue;
       }
+      continue;
+    }
 
-      const fFrame = ((timeSec - tOffset) / Math.max(1e-6, totalDur)) * (numFrames - 1);
+    const fFrame = ((timeSec - tOffset) / durSpan) * (numFrames - 1);
+    const ix = Math.max(0, Math.min(numFrames - 1, Math.round(fFrame)));
+
+    for (let py = 0; py < renderH; py++) {
+      const fBin = fBinLookup[py];
+      const pIdx = (py * renderW + px) * 4;
 
       let db;
       if (smooth) {
         db = sampleBilinearDb(sxxDb, numFrames, numBins, fFrame, fBin);
       } else {
-        const ix = Math.max(0, Math.min(numFrames - 1, Math.round(fFrame)));
         const iy = Math.max(0, Math.min(numBins - 1, Math.round(fBin)));
         db = sxxDb[ix * numBins + iy];
       }

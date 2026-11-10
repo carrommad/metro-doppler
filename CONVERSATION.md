@@ -1,6 +1,8 @@
 # Metro Doppler Hybrid Web App
 > **Target:** `metro-doppler` (main)
 
+- 2026-11-10T11:51:30+01:00 | Optimized live rolling canvas renderer for 60 FPS smoothness: persistent offscreen canvas caching, precomputed frequency/time lookup arrays, and inverted loop order to eliminate GC churn and per-pixel math | DONE
+
 - 2026-11-10T11:43:00+01:00 | Fixed rolling window live view: initialized viewport to fixed rollSec window [0, rollSec] during live capture and blanked unrecorded future pixels so spectrogram visibly streams and rolls from left to right | DONE
 
 - 2026-11-10T11:27:00+01:00 | Modularized repository frontend: decomposed 2,713-line monolithic static/app.js into native ES6 modules under static/js/ (state.js, spectrogram.js, proximity.js, map.js, audio.js, export.js, main.js) loaded via script type=module | DONE
