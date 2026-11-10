@@ -1,6 +1,8 @@
 # Metro Doppler Hybrid Web App
 > **Target:** `metro-doppler` (main)
 
+- 2026-11-10T11:43:00+01:00 | Fixed rolling window live view: initialized viewport to fixed rollSec window [0, rollSec] during live capture and blanked unrecorded future pixels so spectrogram visibly streams and rolls from left to right | DONE
+
 - 2026-11-10T11:27:00+01:00 | Modularized repository frontend: decomposed 2,713-line monolithic static/app.js into native ES6 modules under static/js/ (state.js, spectrogram.js, proximity.js, map.js, audio.js, export.js, main.js) loaded via script type=module | DONE
 
 - 2026-11-10T11:15:00+01:00 | Fixed rolling window frame offset calculation in high-res canvas renderer: properly mapped tOffset so the live spectrogram actively updates and rolls without freezing | DONE

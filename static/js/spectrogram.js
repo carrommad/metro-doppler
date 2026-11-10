@@ -26,9 +26,15 @@ export function setSpectrogramData(canvas, result) {
   SPEC_VIEW.result = result;
   const rollSec = parseFloat(document.getElementById("select-rolling-window")?.value) || 20.0;
   const totalT = (result.tOffset || 0) + result.duration_sec;
-  if (APP_STATE.isRecording && rollSec > 0 && totalT > rollSec) {
-    SPEC_VIEW.tMin = totalT - rollSec;
-    SPEC_VIEW.tMax = totalT;
+
+  if (APP_STATE.isRecording && rollSec > 0) {
+    if (totalT <= rollSec) {
+      SPEC_VIEW.tMin = 0;
+      SPEC_VIEW.tMax = rollSec;
+    } else {
+      SPEC_VIEW.tMin = totalT - rollSec;
+      SPEC_VIEW.tMax = totalT;
+    }
   } else {
     SPEC_VIEW.tMin = result.tOffset || 0;
     SPEC_VIEW.tMax = Math.max(SPEC_VIEW.tMin + 0.01, totalT);
@@ -122,6 +128,17 @@ export function renderSpectrogramToCanvas(canvas, result) {
       const tFrac = px / Math.max(1, renderW - 1);
       const timeSec = tMin + tFrac * (tMax - tMin);
       const tOffset = result.tOffset || 0;
+      const pIdx = (py * renderW + px) * 4;
+
+      // In live recording mode before full window is filled, leave future time unpainted (dark background)
+      if (APP_STATE.isRecording && (timeSec < tOffset || timeSec > tOffset + totalDur + 0.05)) {
+        pixels[pIdx + 0] = 7;
+        pixels[pIdx + 1] = 11;
+        pixels[pIdx + 2] = 18;
+        pixels[pIdx + 3] = 255;
+        continue;
+      }
+
       const fFrame = ((timeSec - tOffset) / Math.max(1e-6, totalDur)) * (numFrames - 1);
 
       let db;
@@ -135,7 +152,6 @@ export function renderSpectrogramToCanvas(canvas, result) {
 
       const norm = Math.max(0, Math.min(1, (db - vmin) / dbSpan));
       const lutIdx = Math.round(norm * 255) * 3;
-      const pIdx = (py * renderW + px) * 4;
       pixels[pIdx + 0] = COLORMAP_LUT[lutIdx + 0];
       pixels[pIdx + 1] = COLORMAP_LUT[lutIdx + 1];
       pixels[pIdx + 2] = COLORMAP_LUT[lutIdx + 2];
@@ -462,3 +478,4 @@ export function zoomSpectrogram(factor, anchorFx = 0.5, anchorFy = 0.5) {
   SPEC_VIEW.fMax = fMin + newFSpan;
   renderSpectrogramToCanvas(document.getElementById("hires-canvas"));
 }
+
