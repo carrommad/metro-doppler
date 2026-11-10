@@ -1,6 +1,8 @@
 # Metro Doppler Hybrid Web App
 > **Target:** `metro-doppler` (main)
 
+- 2026-11-10T11:00:00+01:00 | Redesigned UI for high intuition & minimalism: larger action buttons, bigger panel headers, decluttered topbar and footers, and collapsed advanced STFT settings into a clean details accordion | DONE
+
 - 2026-11-10T10:53:00+01:00 | Implemented rolling spectrogram window (12s, 16s, 20s default, 30s, or Full) for live capture to maintain high frame rate without memory slowdown, keeping full audio intact for bundle download | DONE
 
 - 2026-11-09T23:05:00+01:00 | Fixed phone view responsiveness and missing proximity lines: replaced min-width with responsive mobile media queries, added initial standby rendering for spectrogram and live fallback tracks for proximity canvas | DONE

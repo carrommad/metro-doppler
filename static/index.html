@@ -7,47 +7,38 @@
   <link rel="icon" type="image/png" sizes="64x64" href="favicon.png?v=3" />
   <link rel="shortcut icon" href="favicon.ico?v=3" />
   <link rel="apple-touch-icon" href="favicon.png?v=3" />
-  <link rel="stylesheet" href="vendor/leaflet.css?v=17" />
-  <link rel="stylesheet" href="style.css?v=17" />
+  <link rel="stylesheet" href="vendor/leaflet.css?v=18" />
+  <link rel="stylesheet" href="style.css?v=18" />
 </head>
 <body>
   <header class="topbar">
     <div class="brand">
       <span class="brand-dot"></span>
       <h1>Metro Doppler</h1>
-      <span class="subtitle">Raw Acoustic Capture • Parallel Live High-Res STFT (`fft.js` Worker / `scipy`) • TMB GTFS</span>
     </div>
     <div class="status-badges">
-      <div id="badge-dsp" class="badge badge-neutral" title="Browser DSP Status (echoCancellation, noiseSuppression, autoGainControl)">
-        DSP: Uninitialized
-      </div>
-      <div id="badge-sr" class="badge badge-neutral" title="Dynamic Hardware AudioContext Sample Rate">
-        Sample Rate: — Hz
-      </div>
-      <div id="badge-gps" class="badge badge-neutral" title="Geolocation Status">
-        GPS: Waiting…
-      </div>
-      <div id="badge-backend" class="badge badge-neutral" title="Python Scipy Service Status">
-        Python API: Checking…
-      </div>
+      <div id="badge-dsp" class="badge badge-neutral" title="Browser DSP Status">DSP: OFF</div>
+      <div id="badge-sr" class="badge badge-neutral" title="Dynamic Audio Sample Rate">fs: — Hz</div>
+      <div id="badge-gps" class="badge badge-neutral" title="Geolocation Status">GPS: Live</div>
+      <div id="badge-backend" class="badge badge-neutral" title="Python Scipy Service Status">API: Offline</div>
     </div>
   </header>
 
   <div id="dsp-alert" class="alert-banner hidden"></div>
 
   <main class="stacked-workspace">
-    <!-- Top Box (~Half Screen, Resizable): Recording Controls + Unified Live High-Res Spectrogram -->
-    <section id="panel-spectrogram" class="card resizable-panel spec-panel" data-title="Recording &amp; Live Spectrogram">
+    <!-- Top Box: Recording Controls + High-Res Spectrogram -->
+    <section id="panel-spectrogram" class="card resizable-panel spec-panel" data-title="Acoustic Spectrogram">
       <div class="controls-row">
         <div class="btn-group">
-          <button id="btn-record" class="btn btn-primary">
+          <button id="btn-record" class="btn btn-primary btn-lg">
             <span class="rec-icon"></span> Start Recording
           </button>
-          <button id="btn-stop" class="btn btn-danger" disabled>
-            Stop Recording
+          <button id="btn-stop" class="btn btn-danger btn-lg" disabled>
+            ■ Stop
           </button>
-          <button id="btn-synth" class="btn btn-secondary" title="Generate synthetic Metro pass-by Doppler signal at hardware sample rate">
-            Simulate Pass-By
+          <button id="btn-synth" class="btn btn-secondary btn-lg" title="Simulate Metro Pass-By Doppler">
+            ⚡ Simulate
           </button>
         </div>
 
@@ -65,86 +56,84 @@
 
         <div class="export-actions">
           <audio id="audio-preview" controls class="audio-player hidden"></audio>
-          <button id="btn-download-bundle" class="btn btn-accent" disabled>
-            Download Bundle (.zip: WAV + PNG + JSON)
+          <button id="btn-download-bundle" class="btn btn-accent btn-lg" disabled>
+            📥 Export .ZIP
           </button>
         </div>
       </div>
 
-      <div class="settings-grid">
-        <div class="field">
-          <label for="select-engine">Engine (Live Worker + Final)</label>
-          <select id="select-engine">
-            <option value="fftjs">In-Browser Parallel Worker (fft.js — Exact Scipy Params)</option>
-            <option value="scipy">Python Service on Stop (POST /api/spectrogram — scipy.signal)</option>
-          </select>
+      <!-- Collapsible Advanced STFT Settings -->
+      <details class="settings-accordion">
+        <summary class="accordion-summary">⚙ STFT &amp; Propagation Parameters</summary>
+        <div class="settings-grid">
+          <div class="field">
+            <label for="select-engine">STFT Engine</label>
+            <select id="select-engine">
+              <option value="fftjs">Worker (fft.js — Scipy match)</option>
+              <option value="scipy">Python Service (scipy.signal)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="input-nperseg">nperseg / nfft</label>
+            <select id="input-nperseg">
+              <option value="2048">2048</option>
+              <option value="4096" selected>4096</option>
+              <option value="8192">8192</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="input-overlap">noverlap</label>
+            <input id="input-overlap" type="number" value="3584" min="0" step="128" />
+          </div>
+          <div class="field">
+            <label for="input-fmax">Max Freq (Hz)</label>
+            <input id="input-fmax" type="number" value="4000" min="200" max="96000" step="100" />
+          </div>
+          <div class="field" title="Ground speed for distance delay Δτ = d / c_ground">
+            <label for="input-c-ground">Ground Speed (m/s)</label>
+            <input id="input-c-ground" type="number" value="1500" min="200" max="5000" step="50" />
+          </div>
+          <div class="field" title="Base train acoustic emission frequency">
+            <label for="input-f0-train">Base f₀ (Hz)</label>
+            <input id="input-f0-train" type="number" value="440" min="50" max="3500" step="10" />
+          </div>
+          <div class="field field-btn">
+            <button id="btn-recompute" class="btn btn-outline" disabled>Recompute</button>
+          </div>
         </div>
-        <div class="field">
-          <label for="input-nperseg">nperseg / nfft</label>
-          <select id="input-nperseg">
-            <option value="2048">2048</option>
-            <option value="4096" selected>4096 (Notebook Default)</option>
-            <option value="8192">8192</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="input-overlap">noverlap</label>
-          <input id="input-overlap" type="number" value="3584" min="0" step="128" />
-        </div>
-        <div class="field">
-          <label for="input-fmax">Max Freq (Hz)</label>
-          <input id="input-fmax" type="number" value="4000" min="200" max="96000" step="100" />
-        </div>
-        <div class="field" title="Ground acoustic/seismic wave propagation speed (m/s) used for distance delay Δτ = d / c_ground">
-          <label for="input-c-ground">Ground Speed (m/s)</label>
-          <input id="input-c-ground" type="number" value="1500" min="200" max="5000" step="50" />
-        </div>
-        <div class="field" title="Base train emission frequency (Hz) for expected Doppler curve overlay">
-          <label for="input-f0-train">Train Base f₀ (Hz)</label>
-          <input id="input-f0-train" type="number" value="440" min="50" max="3500" step="10" />
-        </div>
-        <div class="field field-btn">
-          <button id="btn-recompute" class="btn btn-outline" disabled>Recompute</button>
-        </div>
-      </div>
+      </details>
 
       <!-- Interactive Spectrogram Header + Toolbar -->
       <div class="spec-toolbar">
         <div class="tool-group">
-          <strong class="toolbar-title">Live High-Res Spectrogram</strong>
-          <span id="hires-engine-tag" class="tag">Parallel Worker • Hann 4096/3584</span>
-          <span id="hires-spec-meta" class="card-meta">Ready — streams in real time while recording</span>
-        </div>
-
-        <div class="tool-group">
-          <button id="btn-mode-pan" class="btn btn-xs btn-tool active" title="Wheel to zoom around cursor, drag to pan">
+          <button id="btn-mode-pan" class="btn btn-sm btn-tool active" title="Drag to pan">
             🔍 Pan / Zoom
           </button>
-          <button id="btn-mode-measure" class="btn btn-xs btn-tool" title="Click & drag to measure Δt, Δf, slope, and Doppler speed">
-            📏 Measure Δt / Δf
+          <button id="btn-mode-measure" class="btn btn-sm btn-tool" title="Measure Δt, Δf, Doppler">
+            📏 Measure
           </button>
-          <button id="btn-clear-measure" class="btn btn-xs btn-outline hidden">✕ Clear</button>
-          <label class="toggle-label" title="Overlay expected Doppler signal region & line from closest moving trains (including ground transmission delay)">
+          <button id="btn-clear-measure" class="btn btn-sm btn-outline hidden">✕ Clear</button>
+          <label class="toggle-label" title="Expected Metro Doppler Signal">
             <input id="chk-expected-overlay" type="checkbox" checked />
-            <span>🎯 Expected Metro Signal</span>
+            <span>🎯 Expected Signal</span>
           </label>
-          <label class="toggle-label" title="2D Bilinear sub-pixel interpolation in dB space for smooth zoomed-in spectrograms">
+          <label class="toggle-label" title="Smooth Bilinear Interpolation">
             <input id="chk-smooth" type="checkbox" checked />
-            <span>Smooth Zoom</span>
+            <span>Smooth</span>
           </label>
-          <div class="rolling-wrap" title="Keep a fixed rolling time window during live capture to maintain high performance">
-            <label for="select-rolling-window" class="muted" style="font-size:11px;font-weight:600;">Rolling:</label>
+          <div class="rolling-wrap" title="Rolling window duration for fast real-time rendering">
+            <label for="select-rolling-window" class="muted" style="font-size:12px;font-weight:600;">Rolling:</label>
             <select id="select-rolling-window" class="select-xs">
               <option value="12">12s</option>
               <option value="16">16s</option>
               <option value="20" selected>20s (Fast)</option>
               <option value="30">30s</option>
-              <option value="0">Full (All)</option>
+              <option value="0">Full</option>
             </select>
           </div>
-          <button id="btn-zoom-in" class="btn btn-xs btn-outline" title="Zoom In">+</button>
-          <button id="btn-zoom-out" class="btn btn-xs btn-outline" title="Zoom Out">−</button>
-          <button id="btn-zoom-reset" class="btn btn-xs btn-outline" title="Reset Zoom to 100%">Reset</button>
+          <button id="btn-zoom-in" class="btn btn-sm btn-outline" title="Zoom In">+</button>
+          <button id="btn-zoom-out" class="btn btn-sm btn-outline" title="Zoom Out">−</button>
+          <button id="btn-zoom-reset" class="btn btn-sm btn-outline" title="Reset">Reset</button>
         </div>
 
         <div class="cursor-readout mono" id="spec-cursor-readout">
@@ -153,7 +142,7 @@
       </div>
 
       <div id="measure-readout" class="measure-banner hidden">
-        <span id="measure-text">Click and drag on the spectrogram to measure between two points.</span>
+        <span id="measure-text">Click and drag on the spectrogram to measure.</span>
       </div>
 
       <div class="canvas-container hires-canvas-wrap">
@@ -162,51 +151,41 @@
       </div>
 
       <div class="dsp-telemetry" id="dsp-telemetry">
-        <span><strong>Track Settings:</strong> awaiting microphone stream… (drag bottom-right corner to resize box)</span>
+        <span>Hardware AudioContext fs=44100 Hz | Raw Capture</span>
       </div>
     </section>
 
-    <!-- Middle Box (Resizable): High-Resolution 3D Distance & Target Proximity Graph -->
-    <section id="panel-proximity" class="card resizable-panel prox-panel" data-title="3D Distance &amp; Target Proximity Graph">
-      <div class="card-header">
-        <div>
-          <h2>3D Distance &amp; Target Proximity Graph <span class="tag">Top Max = Closest to Target + Ground Delay Δτ</span></h2>
-          <p class="card-meta" id="prox-meta">Synced with Spectrogram time window — curves rise from FAR to the Horizontal Top Max line (◆) at closest approach</p>
-        </div>
-      </div>
+    <!-- Middle Box: 3D Distance & Target Proximity Graph -->
+    <section id="panel-proximity" class="card resizable-panel prox-panel" data-title="3D Distance to Metros">
       <div class="canvas-container prox-canvas-wrap">
         <canvas id="proximity-canvas" width="1280" height="320"></canvas>
       </div>
     </section>
 
-    <!-- Bottom Box (~Half Screen, Resizable): Leaflet Map + TMB Static GTFS + User GPS -->
-    <section id="panel-map" class="card resizable-panel map-panel" data-title="TMB Map &amp; Observation Point">
+    <!-- Bottom Box: Map + TMB GTFS + Observation Point -->
+    <section id="panel-map" class="card resizable-panel map-panel" data-title="Live Metro Map &amp; Acoustic Target">
       <div class="card-header">
-        <div>
-          <h2>TMB Static GTFS &amp; Observation Point <span class="tag">Click Map to Set Point</span></h2>
-          <p class="card-meta" id="map-meta">Click anywhere on the map to place the acoustic sensor point &amp; track closest trains</p>
-        </div>
         <div class="map-actions">
-          <button id="btn-use-gps" class="btn btn-sm btn-outline" title="Snap observation point back to live GPS">Snap to GPS</button>
-          <button id="btn-locate" class="btn btn-sm btn-outline">Center Point</button>
-          <label class="btn btn-sm btn-outline file-label" title="Load custom GTFS .zip (shapes.txt/routes.txt/stops.txt) or .geojson">
-            Load GTFS (.zip / .geojson)
+          <button id="btn-use-gps" class="btn btn-sm btn-outline" title="Snap to live GPS">📍 Snap GPS</button>
+          <button id="btn-locate" class="btn btn-sm btn-outline">🎯 Center Target</button>
+          <label class="btn btn-sm btn-outline file-label" title="Load custom GTFS">
+            📁 Custom GTFS
             <input id="input-gtfs-file" type="file" accept=".zip,.geojson,.json" hidden />
           </label>
         </div>
       </div>
       <div id="map" class="map-container"></div>
       <div class="gtfs-summary" id="gtfs-summary">
-        <div><strong>Observation Point:</strong> <span id="gps-coords" class="mono">41.38700, 2.17000 (Click map)</span></div>
-        <div><strong>Closest Station:</strong> <span id="nearest-station">—</span> (<span id="nearest-lines">—</span>)</div>
-        <div><strong>Closest Live Trains &amp; Ground Delay:</strong> <span id="closest-trains-live" class="mono">—</span></div>
+        <div><strong>Target:</strong> <span id="gps-coords" class="mono">41.38700, 2.17000 (Click map to set)</span></div>
+        <div><strong>Nearest Station:</strong> <span id="nearest-station">—</span> (<span id="nearest-lines">—</span>)</div>
+        <div><strong>Closest Metros:</strong> <span id="closest-trains-live" class="mono">—</span></div>
       </div>
     </section>
   </main>
 
-  <script src="vendor/leaflet.js?v=17"></script>
-  <script src="vendor/jszip.min.js?v=17"></script>
-  <script src="vendor/fft.js?v=17"></script>
-  <script src="app.js?v=17"></script>
+  <script src="vendor/leaflet.js?v=18"></script>
+  <script src="vendor/jszip.min.js?v=18"></script>
+  <script src="vendor/fft.js?v=18"></script>
+  <script src="app.js?v=18"></script>
 </body>
 </html>

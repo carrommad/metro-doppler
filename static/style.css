@@ -266,8 +266,34 @@ body {
   border-color: #475569;
 }
 
-.btn-sm { padding: 4px 10px; font-size: 11.5px; }
-.btn-xs { padding: 3px 8px; font-size: 11px; border-radius: 5px; }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+.btn-xs { padding: 4px 10px; font-size: 11px; border-radius: 5px; }
+.btn-lg { padding: 9px 18px; font-size: 13.5px; font-weight: 700; border-radius: 7px; }
+
+.settings-accordion {
+  background: #080b12;
+  border: 1px solid var(--card-border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  margin-top: 2px;
+}
+
+.accordion-summary {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+}
+.accordion-summary:hover {
+  color: #38bdf8;
+}
+
+.settings-accordion[open] .settings-grid {
+  padding-top: 10px;
+  margin-top: 6px;
+}
 
 .btn-tool {
   background: #111827;
@@ -575,12 +601,12 @@ body {
 }
 
 /* Minimize / restore for every panel box */
-.resizable-panel { padding-top: 30px; }
+.resizable-panel { padding-top: 36px; }
 .panel-minbar {
   position: absolute;
-  top: 6px;
+  top: 8px;
   left: 16px;
-  right: 10px;
+  right: 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -588,23 +614,27 @@ body {
   pointer-events: none;
 }
 .panel-minbar-title {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--muted);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #f1f5f9;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
 }
 .panel-min-btn {
   pointer-events: auto;
   background: #0f172a;
-  border: 1px solid #293548;
+  border: 1px solid #334155;
   color: var(--text);
-  border-radius: 5px;
-  width: 24px;
-  height: 20px;
-  line-height: 16px;
-  font-size: 13px;
+  border-radius: 6px;
+  width: 28px;
+  height: 24px;
+  line-height: 20px;
+  font-size: 15px;
+  font-weight: bold;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .panel-min-btn:hover { background: #1e293b; }
 .resizable-panel.minimized {
