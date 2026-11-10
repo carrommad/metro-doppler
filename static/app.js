@@ -455,8 +455,14 @@ function sampleBilinearDb(sxxDb, numFrames, numBins, fFrame, fBin) {
 
 function setSpectrogramData(canvas, result) {
   SPEC_VIEW.result = result;
-  SPEC_VIEW.tMin = 0;
-  SPEC_VIEW.tMax = Math.max(0.01, result.duration_sec);
+  const rollSec = parseFloat(document.getElementById("select-rolling-window")?.value) || 20.0;
+  if (APP_STATE.isRecording && rollSec > 0 && result.duration_sec > rollSec) {
+    SPEC_VIEW.tMin = result.duration_sec - rollSec;
+    SPEC_VIEW.tMax = result.duration_sec;
+  } else {
+    SPEC_VIEW.tMin = 0;
+    SPEC_VIEW.tMax = Math.max(0.01, result.duration_sec);
+  }
   SPEC_VIEW.fMin = 0;
   SPEC_VIEW.fMax = Math.max(10, result.fmax_hz);
   renderSpectrogramToCanvas(canvas, result);
@@ -1649,6 +1655,7 @@ function updateClosestTrainsRadar(now) {
   // Log kinematics during recording for the 4 Metro Line Proximity Curves below the spectrogram
   if (APP_STATE.isRecording) {
     const tEmit = (performance.now() - APP_STATE.recordingStartPerf) / 1000.0;
+    const rollSec = parseFloat(document.getElementById("select-rolling-window")?.value) || 20.0;
     for (const c of closest.slice(0, 4)) {
       const key = `${c.lineName}_${c.srvId}`;
       if (!APP_STATE.expectedTrainTracks[key]) {
@@ -1659,11 +1666,19 @@ function updateClosestTrainsRadar(now) {
           samples: [],
         };
       }
-      APP_STATE.expectedTrainTracks[key].samples.push({
+      const tr = APP_STATE.expectedTrainTracks[key];
+      tr.samples.push({
         tEmit,
         distM: c.distM,
         vRadialMps: c.vRadialMps,
       });
+      // Trim old samples beyond rolling window to prevent memory buildup and keep line drawing fast
+      if (rollSec > 0 && tr.samples.length > 2) {
+        const cutoff = tEmit - (rollSec + 4.0);
+        while (tr.samples.length > 2 && tr.samples[0].tEmit < cutoff) {
+          tr.samples.shift();
+        }
+      }
     }
     if (SPEC_VIEW.result) {
       renderSpectrogramToCanvas(document.getElementById("hires-canvas"));
@@ -1895,6 +1910,15 @@ function initParallelWorker() {
 function flushLiveHighResSpectrogram() {
   if (!LIVE_STFT.dirty || LIVE_STFT.columns.length === 0) return;
   LIVE_STFT.dirty = false;
+
+  // Enforce rolling window during recording to bound memory and CPU footprint
+  const rollSec = parseFloat(document.getElementById("select-rolling-window")?.value) || 20.0;
+  if (rollSec > 0 && LIVE_STFT.timeStepSec > 0) {
+    const maxCols = Math.max(10, Math.ceil(rollSec / LIVE_STFT.timeStepSec));
+    if (LIVE_STFT.columns.length > maxCols) {
+      LIVE_STFT.columns = LIVE_STFT.columns.slice(LIVE_STFT.columns.length - maxCols);
+    }
+  }
 
   const numFrames = LIVE_STFT.columns.length;
   const numBins = LIVE_STFT.plottedBins;
@@ -2613,6 +2637,15 @@ window.addEventListener("DOMContentLoaded", () => {
   if (inputF0Train) {
     inputF0Train.addEventListener("change", () => {
       renderSpectrogramToCanvas(hiresCanvas);
+    });
+  }
+
+  const selectRolling = document.getElementById("select-rolling-window");
+  if (selectRolling) {
+    selectRolling.addEventListener("change", () => {
+      if (SPEC_VIEW.result) {
+        setSpectrogramData(hiresCanvas, SPEC_VIEW.result);
+      }
     });
   }
 

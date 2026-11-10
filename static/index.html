@@ -7,8 +7,8 @@
   <link rel="icon" type="image/png" sizes="64x64" href="favicon.png?v=3" />
   <link rel="shortcut icon" href="favicon.ico?v=3" />
   <link rel="apple-touch-icon" href="favicon.png?v=3" />
-  <link rel="stylesheet" href="vendor/leaflet.css?v=16" />
-  <link rel="stylesheet" href="style.css?v=16" />
+  <link rel="stylesheet" href="vendor/leaflet.css?v=17" />
+  <link rel="stylesheet" href="style.css?v=17" />
 </head>
 <body>
   <header class="topbar">
@@ -132,6 +132,16 @@
             <input id="chk-smooth" type="checkbox" checked />
             <span>Smooth Zoom</span>
           </label>
+          <div class="rolling-wrap" title="Keep a fixed rolling time window during live capture to maintain high performance">
+            <label for="select-rolling-window" class="muted" style="font-size:11px;font-weight:600;">Rolling:</label>
+            <select id="select-rolling-window" class="select-xs">
+              <option value="12">12s</option>
+              <option value="16">16s</option>
+              <option value="20" selected>20s (Fast)</option>
+              <option value="30">30s</option>
+              <option value="0">Full (All)</option>
+            </select>
+          </div>
           <button id="btn-zoom-in" class="btn btn-xs btn-outline" title="Zoom In">+</button>
           <button id="btn-zoom-out" class="btn btn-xs btn-outline" title="Zoom Out">−</button>
           <button id="btn-zoom-reset" class="btn btn-xs btn-outline" title="Reset Zoom to 100%">Reset</button>
@@ -194,9 +204,9 @@
     </section>
   </main>
 
-  <script src="vendor/leaflet.js?v=16"></script>
-  <script src="vendor/jszip.min.js?v=16"></script>
-  <script src="vendor/fft.js?v=16"></script>
-  <script src="app.js?v=16"></script>
+  <script src="vendor/leaflet.js?v=17"></script>
+  <script src="vendor/jszip.min.js?v=17"></script>
+  <script src="vendor/fft.js?v=17"></script>
+  <script src="app.js?v=17"></script>
 </body>
 </html>

@@ -420,6 +420,23 @@ body {
   user-select: none;
 }
 
+.rolling-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.select-xs {
+  background: #080b12;
+  border: 1px solid #293548;
+  color: #38bdf8;
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
 .cursor-readout {
   font-size: 11px;
   color: #38bdf8;

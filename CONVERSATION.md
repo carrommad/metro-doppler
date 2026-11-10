@@ -1,6 +1,8 @@
 # Metro Doppler Hybrid Web App
 > **Target:** `metro-doppler` (main)
 
+- 2026-11-10T10:53:00+01:00 | Implemented rolling spectrogram window (12s, 16s, 20s default, 30s, or Full) for live capture to maintain high frame rate without memory slowdown, keeping full audio intact for bundle download | DONE
+
 - 2026-11-09T23:05:00+01:00 | Fixed phone view responsiveness and missing proximity lines: replaced min-width with responsive mobile media queries, added initial standby rendering for spectrogram and live fallback tracks for proximity canvas | DONE
 
 - 2026-11-09T22:50:30+01:00 | Created comprehensive README.md with application documentation, quickstart instructions, parameter tables, and user screenshots saved in `docs/images/` | DONE
