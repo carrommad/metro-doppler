@@ -1,6 +1,8 @@
 # Metro Doppler Hybrid Web App
 > **Target:** `metro-doppler` (main)
 
+- 2026-11-10T11:27:00+01:00 | Modularized repository frontend: decomposed 2,713-line monolithic static/app.js into native ES6 modules under static/js/ (state.js, spectrogram.js, proximity.js, map.js, audio.js, export.js, main.js) loaded via script type=module | DONE
+
 - 2026-11-10T11:15:00+01:00 | Fixed rolling window frame offset calculation in high-res canvas renderer: properly mapped tOffset so the live spectrogram actively updates and rolls without freezing | DONE
 
 - 2026-11-10T11:03:30+01:00 | Further enlarged panel box headers (16px bold uppercase), minimize buttons (34x30px), and enlarged action buttons (15px bold, 12px 24px padding) | DONE
